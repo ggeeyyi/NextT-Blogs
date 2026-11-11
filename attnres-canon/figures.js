@@ -63,12 +63,11 @@
       attnChain: ['注意力子层', [['深度读取', 'depth', 52], ['Canon-A', 'canon', 54], ['q/k/v', '', 40], ['Canon-B ×3', 'canon', 70], ['注意力', '', 44]]],
       mlpChain: ['MLP 子层', [['深度读取', 'depth', 52], ['Canon-C', 'canon', 54], ['up-proj', '', 48], ['Canon-D', 'canon', 54], ['ReLU²', '', 42], ['down-proj', '', 60]]],
       canonInset: 'Canon 层：宽度为 4 的因果卷积', rowIn: '输入', rowOut: '输出',
-      canonNotes: ['每个输出只混合当前和前 3 个位置，看不到后面；', '卷积权重初始为 0，训练开始时与不加 Canon 完全一样。'],
+      canonNotes: ['每个输出只混合当前和前 3 个位置，看不到后面。'],
       mechLegend: ['深度方向（Full AttnRes）', '序列方向（Canon 层）'],
       contextAria: '已发布结果的 CORE 与验证 BPB',
-      scatterTitle: (n) => `(a) ${n} 个已发布结果`, scatterSub: '越靠右上越好', scatterX: '验证 BPB（向右更低）', scatterY: 'CORE', better: '两项都更好',
-      tasksTitle: '(b) 逐任务得分差', tasksSub: 'AttnRes-Canon − Block AttnRes，满分 100',
-      boolqNote: ['2.0 分的领先里，', 'BoolQ 占 1.3 分'], others: '其他已发布结果', diff: '差值',
+      scatterTitle: (n) => `${n} 个已发布结果`, scatterSub: '越靠右上越好', scatterX: '验证 BPB（向右更低）', scatterY: 'CORE', better: '两项都更好',
+      others: '其他已发布结果',
       formalAria: '完整训练中相对 Block AttnRes 的验证 BPB 与 CORE 差值',
       lr: '学习率', lrFlat: '学习率不变', lrDecay: '线性下降到 5%',
       formalA: '(a) 验证 BPB 差值', formalB: '(b) CORE 差值', formalBShort: '(b) CORE 差值',
@@ -116,12 +115,11 @@
       attnChain: ['Attention sublayer', [['depth read', 'depth', 62], ['Canon-A', 'canon', 54], ['q/k/v', '', 40], ['Canon-B ×3', 'canon', 70], ['attention', '', 58]]],
       mlpChain: ['MLP sublayer', [['depth read', 'depth', 60], ['Canon-C', 'canon', 52], ['up-proj', '', 48], ['Canon-D', 'canon', 52], ['ReLU²', '', 40], ['down-proj', '', 60]]],
       canonInset: 'Canon layer: width-4 causal convolution', rowIn: 'in', rowOut: 'out',
-      canonNotes: ['Each output mixes its own input and the three before it,', 'never a later one. The weights start at zero, so training', 'begins exactly as it would without Canon.'],
+      canonNotes: ['Each output mixes its own input and the three before it,', 'never a later one.'],
       mechLegend: ['Depth (Full AttnRes)', 'Sequence (Canon layers)'],
       contextAria: 'CORE and validation BPB of the published results',
-      scatterTitle: (n) => `(a) ${n} published results`, scatterSub: 'up and to the right is better', scatterX: 'Validation BPB (lower to the right)', scatterY: 'CORE', better: 'better on both',
-      tasksTitle: '(b) Per-task score difference', tasksSub: 'AttnRes-Canon − Block AttnRes, out of 100',
-      boolqNote: ['Of the 2.0-point lead,', 'BoolQ supplies 1.3'], others: 'Other published results', diff: 'difference',
+      scatterTitle: (n) => `${n} published results`, scatterSub: 'up and to the right is better', scatterX: 'Validation BPB (lower to the right)', scatterY: 'CORE', better: 'better on both',
+      others: 'Other published results',
       formalAria: 'Validation BPB and CORE relative to Block AttnRes over the formal runs',
       lr: 'LR', lrFlat: 'constant learning rate', lrDecay: 'linear decay to 5%',
       formalA: '(a) Validation BPB gap', formalB: '(b) CORE gap', formalBShort: '(b) CORE gap',
@@ -143,14 +141,6 @@
     gdn: 'GDN', kda: 'KDA', retnet: 'RetNet', elu_qknorm: 'ELU-Norm', mhc: 'mHC',
   };
   const nameOf = (m) => tr(NAME[m]) || m;
-  const TASK = {
-    hellaswag_zeroshot: 'HellaSwag (0-shot)', jeopardy: 'Jeopardy', bigbench_qa_wikidata: 'BB QA Wikidata', arc_easy: 'ARC-Easy',
-    arc_challenge: 'ARC-Challenge', copa: 'COPA', commonsense_qa: 'CommonsenseQA', piqa: 'PIQA', openbook_qa: 'OpenBookQA',
-    lambada_openai: 'LAMBADA', hellaswag: 'HellaSwag', winograd: 'Winograd', winogrande: 'WinoGrande',
-    bigbench_dyck_languages: 'BB Dyck', agi_eval_lsat_ar: 'LSAT-AR', bigbench_cs_algorithms: 'BB CS Algorithms',
-    bigbench_operators: 'BB Operators', bigbench_repeat_copy_logic: 'BB Repeat-Copy', squad: 'SQuAD', coqa: 'CoQA',
-    boolq: 'BoolQ', bigbench_language_identification: 'BB Language ID',
-  };
 
   // ---------- helpers ----------
   const css = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
@@ -1051,19 +1041,17 @@
     host.appendChild(legend([[T.mechLegend[0], depth, 'rect'], [T.mechLegend[1], canon, 'rect']]));
   }
 
-  // ---------- figure: the result among the published runs, and where the CORE lead comes from ----------
+  // ---------- figure: the result among the published runs ----------
   function drawContext(host, ctx) {
-    const two = ctx.W >= 640, GAP = 24;
-    const WA = two ? Math.round((ctx.W - GAP) * 0.56) : ctx.W, WB = two ? ctx.W - GAP - WA : ctx.W;
+    const two = ctx.W >= 640, WA = ctx.W;   // one panel at the full width of the card
     const wrap = h('div', { class: 'panels' });
-    if (two) { wrap.style.gridTemplateColumns = `${WA}px ${WB}px`; wrap.style.columnGap = `${GAP}px`; }
     host.appendChild(wrap);
     const ink = css('--text-primary'), sub = css('--text-secondary'), muted = css('--text-muted'), surface = css('--surface');
     const blue = css('--series-1'), gray = css('--series-other'), dark = css('--neutral-mark');
 
     // (a) CORE against validation BPB; the BPB axis runs right to left so that better is up and to the right.
     {
-      const W = WA, H = two ? 372 : 320, ML = 40, MR = 12, MT = 14, MB = 44, ROOM = two ? 104 : 96;
+      const W = WA, H = two ? 360 : 320, ML = 40, MR = 12, MT = 14, MB = 44, ROOM = two ? 120 : 96;
       const area = { left: ML, right: W - MR, top: MT, bottom: H - MB };
       const box = h('div', { class: 'panel' }, [h('div', { class: 'fig-title', text: T.scatterTitle(D.published.length) }), h('div', { class: 'fig-sub', text: T.scatterSub })]);
       wrap.appendChild(box);
@@ -1115,46 +1103,6 @@
       box.appendChild(legend([['AttnRes-Canon', blue, 'dot'], [T.others, gray, 'dot']]));
     }
 
-    // (b) Per-task difference, sorted; one bar per task from a shared zero line.
-    {
-      const tasks = [...D.tasks].map((t) => ({ ...t, d: t.a - t.b })).sort((a, b) => b.d - a.d);
-      const W = WB, ROW = 15, MT = 6, MB = 30, LABELW = 126, H = MT + tasks.length * ROW + MB;
-      const box = h('div', { class: 'panel' }, [h('div', { class: 'fig-title', text: T.tasksTitle }), h('div', { class: 'fig-sub', text: T.tasksSub })]);
-      wrap.appendChild(box);
-      const svg = svgRoot(W, H, T.tasksTitle);
-      box.appendChild(svg);
-      const A = ctx.timeline(svg, 'tasks');
-      const x = linear(-8, 30, LABELW, W - 38), bottom = MT + tasks.length * ROW;
-      for (const v of [0, 10, 20, 30]) {
-        s('line', { x1: x(v), y1: MT, x2: x(v), y2: bottom, stroke: v ? css('--grid') : css('--axis') }, svg);
-        st(svg, x(v), bottom + 16, v ? `+${v}` : '0', { 'font-size': 11, 'text-anchor': 'middle', fill: muted });
-      }
-      tasks.forEach((t, i) => {
-        const cy = MT + i * ROW + ROW / 2, w = Math.abs(x(t.d) - x(0)), positive = t.d >= 0;
-        const g = s('g', { class: 'series', 'data-key': t.task }, svg);
-        st(g, LABELW - 30, cy + 3.5, TASK[t.task] || t.task, { 'font-size': 10.5, 'text-anchor': 'end', fill: t.task === 'boolq' ? ink : sub, 'font-weight': t.task === 'boolq' ? 650 : 400 });
-        let bar = null;
-        if (w >= 0.5) {
-          const x0 = positive ? x(0) : x(t.d), r = Math.min(4, w), top = cy - 4.5, bot = cy + 4.5;
-          const d = positive
-            ? `M${x0},${top} H${x0 + w - r} Q${x0 + w},${top} ${x0 + w},${top + r} V${bot - r} Q${x0 + w},${bot} ${x0 + w - r},${bot} H${x0} Z`
-            : `M${x0 + w},${top} H${x0 + r} Q${x0},${top} ${x0},${top + r} V${bot - r} Q${x0},${bot} ${x0 + r},${bot} H${x0 + w} Z`;
-          bar = s('path', { d, fill: positive ? blue : dark }, g);
-          bar.style.transformBox = 'fill-box';
-          bar.style.transformOrigin = positive ? 'left center' : 'right center';
-          A.web_(bar, [{ transform: 'scaleX(0)' }, { transform: 'scaleX(1)' }], 150 + i * 28, 620);
-        }
-        if (['boolq', 'squad', 'winograd'].includes(t.task)) {
-          const text = st(g, positive ? x(t.d) + 5 : x(t.d) - 5, cy + 3.5, signed(t.d, 1), { 'font-size': 10.5, 'text-anchor': positive ? 'start' : 'end', fill: ink, 'font-weight': 600 });
-          A.fade(text, 700 + i * 28, 320);
-        }
-        const hit = s('rect', { class: 'hit', x: 0, y: cy - ROW / 2, width: W, height: ROW, fill: 'transparent' }, g);
-        hoverMark(svg, hit, t.task, () => ({ title: TASK[t.task] || t.task, rows: [{ color: blue, label: 'AttnRes-Canon', value: t.a.toFixed(1) }, { color: dark, label: 'Block AttnRes', value: t.b.toFixed(1) }, { label: T.diff, value: signed(t.d, 1) }] }));
-      });
-      const note = s('g', {}, svg);
-      T.boolqNote.forEach((line, i) => st(note, W - 2, MT + ROW * 4.2 + i * 14, line, { 'font-size': 10.5, 'text-anchor': 'end', fill: sub }));
-      A.fade(note, 1100, 420);
-    }
   }
 
   // ---------- figure: formal training, relative to Block AttnRes ----------

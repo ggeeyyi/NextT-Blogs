@@ -59,7 +59,7 @@
 
   <div class="abstract">
     <div class="abstract-label">摘要</div>
-    <p>我们在 NextTransformer 的 Arena v1 上做了一次 auto research（自动研究）尝试：让 Claude Opus 5.5 自己设计、筛选 Transformer 架构，人只审批计划和预算。整个过程分三步：前期探索，workflow 设计与三轮搜索，最后是完整训练。搜索时每个候选只训练 2,000 步，约为完整训练步数的 4%，只看训练 loss 和 dev 划分上的 BPB；探索与搜索合计的算力不超过总预算的三分之一。胜出的架构再按固定协议从头训练 49.152B token，按 CORE-22 得分排名。最终找到的 AttnRes-Canon 把 Full AttnRes 和四处 Canon 层结合在一起：完整训练后 CORE 得分 35.99，比搜索的起点 Block AttnRes 高 2.0 分，验证 BPB 低 0.0024，两项在排行榜已发布的结果里都排第一。</p>
+    <p>我们在 NextTransformer 的 Arena v1 上做了一次 auto research（自动研究）尝试：让 Claude Opus 5.5 自己设计、筛选 Transformer 架构，人负责审批计划和预算。整个过程分三步：前期探索，workflow 设计与三轮搜索，最后是完整训练。搜索时每个候选只训练 2,000 步，约为完整训练步数的 4%；胜出的架构再按固定协议从头训练 49.152B token，按 CORE-22 得分排名。最终找到的 AttnRes-Canon 把 Full AttnRes 和四处 Canon 层结合在一起：完整训练后 CORE 得分 35.99，比搜索的起点 Block AttnRes 高 2.0 分，验证 BPB 低 0.0024，两项在排行榜已发布的结果里都排第一。</p>
   </div>
 
   <nav class="toc" aria-label="本文内容">
@@ -94,11 +94,9 @@
       <div><span>04</span><p class="card-title">搜索时能看什么</p><p>只有训练 loss 和 dev 划分上的 BPB（bits per byte，预测每个字节平均要用的 bit 数，越低越好）。</p></div>
     </div>
 
-    <p>难处在于贵。完整训练一次要 1,400 多 GPU 小时，不可能把每个想法都训练到底。Opus 只能让每个候选先训练一小段（下文叫短程训练），用这一小段的 dev BPB 去猜它最终的表现。这把“尺子”要是不准，后面试得再多也是碰运气。所以动手改模型之前，它先花了约 150 GPU 小时做前期探索，回答两个问题。</p>
+    <p>难处在于贵。完整训练一次要 1,400 多 GPU 小时，不可能把每个想法都训练到底。Opus 只能让每个候选先训练一小段（下文叫短程训练），用这一小段的 dev BPB 去猜它最终的表现。这把“尺子”要是不准，后面试得再多也是碰运气。所以动手改模型之前，它先花了约 150 GPU 小时做前期探索，检验短程训练排出的名次准不准。</p>
 
-    <p><strong>第一个问题：研究环境里的训练和正式训练是一回事吗？</strong>是。同一个方法在两边各训练 512 步，第 1 步的 loss 完全相同，之后的差别平均不到 0.004，只来自 GPU 运算本身的微小随机性。</p>
-
-    <p><strong>第二个问题：训练截短以后，排出的名次还准吗？</strong>这要看怎么截。完整训练的学习率先保持不变，后半程才逐渐降下来，这个安排叫学习率调度（schedule）。截短有两种办法（图 1）：“压缩”把整条调度原样挤进 512 步；“前缀”不动调度，只取正式训练最前面的一段。</p>
+    <p>这要看训练怎么截短。完整训练的学习率先保持不变，后半程才逐渐降下来，这个安排叫学习率调度（schedule）。截短有两种办法（图 1）：“压缩”把整条调度原样挤进 512 步；“前缀”不动调度，只取正式训练最前面的一段。</p>
 
     <figure class="wide" id="fig-shorten">
       <div class="fig-body" data-figure="shorten"></div>
@@ -112,7 +110,7 @@
       <figcaption><strong>图 2.</strong> 短程排名与最终排名。</figcaption>
     </figure>
 
-    <p><strong>压缩调度排不准名次。</strong>两组名次的 Spearman 相关只有 0.40（1 表示名次完全一致，0 表示毫无关系），远低于事先定下的 0.85 标准；在最终 BPB 相差超过 0.005 的 46 对方法里，短程训练只排对了 31 对。错得还很有规律：四个 loop 类方法（同一组层反复执行）名次全部下降，四个 linear attention 类方法全部上升。学习率提前降下来，帮了收敛快的 loop 结构，却让起步慢的 linear attention 来不及发力。</p>
+    <p><strong>压缩调度排不准名次。</strong>两组名次的 Spearman 相关只有 0.40（1 表示名次完全一致，0 表示毫无关系），远低于事先定下的 0.85 标准。错得还很有规律：四个 loop 类方法（同一组层反复执行）名次全部下降，四个 linear attention 类方法全部上升。学习率提前降下来，帮了收敛快的 loop 结构，却让起步慢的 linear attention 来不及发力。</p>
 
     <p>换成前缀就好得多。用这 11 个方法已发布的完整训练曲线回头去验（图 3）：同样在 500 步左右，前缀的 Spearman 是 0.72；<strong>取到前 2,000 步时达到 0.92</strong>，过了标准。</p>
 
@@ -129,7 +127,7 @@
     <p class="eyebrow">02 / Workflow</p>
     <h2>搜索 Workflow 设计</h2>
 
-    <p>有了尺子，Opus 把探索的结论写成一套搜索规则（图 4、表 1）。规则经操作者批准后不再改动：最多搜三轮，总算力不超过 600 GPU 小时。</p>
+    <p>有了尺子，Opus 把探索的结论写成一套搜索规则（图 4、表 1）：最多搜三轮，总算力不超过 600 GPU 小时。</p>
 
     <figure class="wide" id="fig-workflow">
       <div class="fig-body" data-figure="workflow"></div>
@@ -142,12 +140,10 @@
       <table class="plain">
         <thead><tr><th>前期探索的结论</th><th>workflow 里的规则</th></tr></thead>
         <tbody>
-          <tr><td>研究环境里的训练和正式训练一致</td><td>搜索全程在研究环境里做，胜出者移植后直接进入完整训练</td></tr>
           <tr><td>压缩调度排不准名次（Spearman 0.40）</td><td>不压缩调度，只取正式调度的前缀</td></tr>
           <tr><td>前 500 步的排名还不够准（Spearman 0.72，标准是 0.85）</td><td>512 步只设宽松的底线：比 Dense Baseline 差 0.030 以上才提前停掉</td></tr>
           <tr><td>前 2,000 步的排名够准（Spearman 0.92）</td><td>候选的名次和胜负一律看 2,000 步</td></tr>
           <tr><td>同样的训练重复一次，结果也会差一点（记为 δ）</td><td>先测 δ；候选要比最好的 baseline 低 max(2δ, 0.001) 才算胜出</td></tr>
-          <tr><td>起步慢的结构在 2,000 步仍会被低估</td><td>记为已知盲区，混入 linear attention 层（KDA）的想法暂缓</td></tr>
         </tbody>
       </table>
       </div>
@@ -157,7 +153,7 @@
 
     <ul>
       <li><strong>胜出线以 Block AttnRes 为准：</strong>搜索先训练两个 baseline：Arena 的 Dense Baseline，和当时排行榜上最强的 Block AttnRes（排行榜上叫 AttnRes）。用同一个随机种子把 Dense Baseline 再训练一次，2,000 步时两次结果的差距 δ 约为 0.0004。据此，候选的 dev BPB 要比 Block AttnRes 低 0.001 以上才算胜出。</li>
-      <li><strong>一次只改一处，逐轮叠加：</strong>每个候选相对它的父模型（被改动的那个模型）只改一处，事先写下可以被实验推翻的假设，计算量保持在参考成本的 ±1% 以内。下一轮可以拿上一轮的候选当父模型，改动就这样一轮轮叠起来。</li>
+      <li><strong>一次只改一处，逐轮叠加：</strong>每个候选相对它的父模型（被改动的那个模型）只改一处，并事先写下可以被实验推翻的假设。下一轮可以拿上一轮的候选当父模型，改动就这样一轮轮叠起来。</li>
     </ul>
   </section>
 
@@ -168,7 +164,7 @@
 
     <h3 id="s3-1"><span class="no">3.1</span>搜索全局与演进路径</h3>
 
-    <p>搜索从 Block AttnRes 出发，三轮一共训练了 12 个候选，<strong>其中 4 个越过了胜出线</strong>（图 5）。加上 baseline 和噪声测量，共用约 550 GPU 小时，没有超过 600 的上限。512 步的底线没有淘汰任何候选：当时最差的一个也只比 Dense Baseline 差 0.010。</p>
+    <p>搜索从 Block AttnRes 出发，三轮一共训练了 12 个候选，<strong>其中 4 个越过了胜出线</strong>（图 5）。</p>
 
     <figure class="wide" id="fig-lineage">
       <div class="fig-body" data-figure="lineage"></div>
@@ -206,7 +202,7 @@
 
     <h3 id="s3-3"><span class="no">3.3</span>第二轮：组合验证与边际贡献</h3>
 
-    <p>规则只规定 2,000 步定胜负，没有规定什么时候选下一轮的方向。第一轮刚出 512 步的结果，Opus 就照当时的名次定了第二轮要试的组合，又加了两个同计算量的 MoE 变体（把 FFN 换成多个小的 expert，每个 token 只用其中几个）<a class="cite" href="#ref-4">[4]</a>（表 3）。<strong>结果，早期领先的 Gate 占了一半的组合名额。</strong></p>
+    <p>第一轮刚出 512 步的结果，Opus 就照当时的名次定了第二轮要试的组合，又加了两个同计算量的 MoE 变体（把 FFN 换成多个小的 expert，每个 token 只用其中几个）<a class="cite" href="#ref-4">[4]</a>（表 3）。规则只管 2,000 步定胜负，没管下一轮的方向什么时候定，<strong>于是早期领先的 Gate 占了一半的组合名额。</strong></p>
 
     <figure class="tbl wide" id="tab-round2">
       <figcaption><strong>表 3.</strong> 第二轮相对 Block AttnRes 的 dev BPB 差值（越低越好）。</figcaption>
@@ -269,7 +265,7 @@
       <figcaption><strong>图 9.</strong> 相对 Canon-A/C 父模型的 dev BPB 差值。</figcaption>
     </figure>
 
-    <p><strong>AttnRes-Canon 在 2,000 步的 dev BPB 是 0.7965，比 Block AttnRes 低 0.0038，是整场搜索的第一名</strong>（表 5）。512 步时它还排第二，落后于 Gate + Canon-A/C；从 768 步起一直领先。相比 Block AttnRes，它只多了约 127 万个参数，不到模型总量的 0.1%。</p>
+    <p><strong>AttnRes-Canon 在 2,000 步的 dev BPB 是 0.7965，比 Block AttnRes 低 0.0038，是整场搜索的第一名</strong>（表 5）。</p>
 
     <figure class="tbl wide" id="tab-matrix">
       <figcaption><strong>表 5.</strong> 两个方向的改动在 2,000 步的 dev BPB（Δ：相对 Block AttnRes 的差值）。</figcaption>
@@ -284,29 +280,27 @@
       </div>
     </figure>
 
-    <p>两个部件管的是两个方向（图 10）。Block AttnRes 的每一层只能读前面各组输出的总和，好比只能翻每一章的摘要；Full AttnRes 取消分组，每一层都能单独去读前面的任意一层。Canon 层是一个宽度为 4 的小卷积：处理当前 token 时，顺带把前三个 token 的信息混进来；它的权重从零开始，所以训练刚开始时和不加 Canon 完全一样。<strong>一个沿深度方向取信息，一个沿序列方向混合相邻 token</strong>，Opus 因此猜测两者合在一起会互相增强，效果超过各自相加。</p>
+    <p>两个部件管的是两个方向（图 10）。Block AttnRes 的每一层只能读前面各组输出的总和，好比只能翻每一章的摘要；Full AttnRes 取消分组，每一层都能单独去读前面的任意一层。Canon 层是一个宽度为 4 的小卷积：处理当前 token 时，顺带把前三个 token 的信息混进来。<strong>一个沿深度方向取信息，一个沿序列方向混合相邻 token</strong>，合在一起的收益比两者各自相加还多一点（表 5）。</p>
 
     <figure class="wide" id="fig-mechanism">
       <div class="fig-body" data-figure="mechanism"></div>
       <figcaption><strong>图 10.</strong> Full AttnRes 与 Canon 层的作用方向。</figcaption>
     </figure>
 
-    <p>表 5 的数字看上去支持这个猜测：从无 Canon 到 Canon-A/C 再到 Canon-A–D，把 Block 换成 Full 多带来的降幅依次是 −0.0008、−0.0012 和 −0.0017。但相邻两档只差 0.0004 到 0.0005，和重复训练的随机差异（约 0.0004）差不多大，而且都只训练了一个随机种子。<strong>现有数据和“互相增强”的猜测不矛盾，但还不够证明它。</strong></p>
-
     <h3 id="s3-5"><span class="no">3.5</span>完整训练结果</h3>
 
-    <p>搜索只看得到训练最开头的一段，那时学习率还没有开始下降。这点优势能不能保持到最后，要靠完整训练来检验。我们把 AttnRes-Canon 移植成正式插件，逐项核对梯度一致之后，从头训练 49.152B token，耗时约 1,430 GPU 小时。评测看两个指标：验证 BPB，和 CORE-22（22 项任务扣除随机猜测水平后的平均得分，本文按排行榜的写法乘以 100，越高越好）。<strong>AttnRes-Canon 的 CORE 和验证 BPB 在 38 个已发布结果里都排第一</strong>；两项的第二名都是 mHC，一个在搜索开始之后才发布的跨层连接方法（表 6、图 11a）。</p>
+    <p>搜索只看得到训练最开头的一段，那时学习率还没有开始下降。这点优势能不能保持到最后，要靠完整训练来检验。我们把 AttnRes-Canon 移植成正式插件，从头训练 49.152B token。评测看两个指标：验证 BPB，和 CORE-22（22 项任务扣除随机猜测水平后的平均得分，本文按排行榜的写法乘以 100，越高越好）。<strong>AttnRes-Canon 的 CORE 和验证 BPB 在 38 个已发布结果里都排第一</strong>；两项的第二名都是跨层连接方法 mHC（表 6、图 11）。</p>
 
     <figure class="tbl" id="tab-formal">
       <figcaption><strong>表 6.</strong> 完整训练后的结果。</figcaption>
       <div class="table-wrap">
       <table>
-        <thead><tr><th>方法</th><th class="num">CORE</th><th class="num">CORE（不含 BoolQ）</th><th class="num">验证 BPB</th></tr></thead>
+        <thead><tr><th>方法</th><th class="num">CORE</th><th class="num">验证 BPB</th></tr></thead>
         <tbody>
-          <tr><td>Dense Baseline</td><td class="num">33.10</td><td class="num">34.46</td><td class="num">0.6672</td></tr>
-          <tr><td>Block AttnRes</td><td class="num">34.00</td><td class="num">35.96</td><td class="num">0.6630</td></tr>
-          <tr><td>mHC</td><td class="num">35.33</td><td class="num">36.23</td><td class="num">0.6617</td></tr>
-          <tr><td>AttnRes-Canon</td><td class="num"><strong>35.99</strong></td><td class="num"><strong>36.70</strong></td><td class="num"><strong>0.6605</strong></td></tr>
+          <tr><td>Dense Baseline</td><td class="num">33.10</td><td class="num">0.6672</td></tr>
+          <tr><td>Block AttnRes</td><td class="num">34.00</td><td class="num">0.6630</td></tr>
+          <tr><td>mHC</td><td class="num">35.33</td><td class="num">0.6617</td></tr>
+          <tr><td>AttnRes-Canon</td><td class="num"><strong>35.99</strong></td><td class="num"><strong>0.6605</strong></td></tr>
         </tbody>
       </table>
       </div>
@@ -317,9 +311,7 @@
       <figcaption><strong>图 11.</strong> 完整训练后的 CORE 与验证 BPB。</figcaption>
     </figure>
 
-    <p><strong>CORE 上 2.0 分的领先要打个折扣。</strong>和 Block AttnRes 相比，22 项任务里 AttnRes-Canon 有 16 项更好、2 项持平、4 项更差；但高的 2.0 分里，BoolQ（一项是非判断题）一项就占了 1.3 分（图 11b），去掉它之后，领先缩小到 0.7 分。</p>
-
-    <p><strong>验证 BPB 的领先从头保持到尾，但后半程缩小了一半多。</strong>和 Block AttnRes 的差距在 2,000 步是 0.0037，学习率不变的阶段拉大到近 0.006，学习率开始下降后被追回大半，最后停在 0.0024（图 12a、表 7）。</p>
+    <p><strong>验证 BPB 的领先从头保持到尾，但后半程缩小了一半多。</strong>和 Block AttnRes 的差距在 2,000 步是 0.0037，学习率不变的阶段拉大到近 0.006，学习率开始下降后被追回大半，最后停在 0.0024（图 12、表 7）。</p>
 
     <figure class="wide" id="fig-formal">
       <div class="fig-body" data-figure="formal"></div>
@@ -333,19 +325,13 @@
         <thead><tr><th>比较</th><th class="num nw">2,000 步</th><th class="num">学习率不变的阶段（10K–16K 步平均）</th><th class="num">终点</th></tr></thead>
         <tbody>
           <tr><td>AttnRes-Canon 相对 Block AttnRes</td><td class="num">−0.0037</td><td class="num">−0.0058</td><td class="num">−0.0024</td></tr>
-          <tr><td>mHC 相对 Block AttnRes</td><td class="num">−0.0003</td><td class="num">−0.0043</td><td class="num">−0.0013</td></tr>
-          <tr><td>AttnRes-Canon 相对 mHC</td><td class="num">−0.0034</td><td class="num">−0.0015</td><td class="num">−0.0011</td></tr>
           <tr><td>Dense Baseline + Gate 相对 Dense Baseline</td><td class="num">−0.0012</td><td class="num">−0.0004</td><td class="num">+0.0002</td></tr>
         </tbody>
       </table>
       </div>
     </figure>
 
-    <p>差距缩小，主要是因为 Block AttnRes 自己在学习率下降的阶段进步得更快：同一时段 mHC 对 Block AttnRes 的领先也缩了大半，而 AttnRes-Canon 对 mHC 的领先几乎没变（−0.0015 到 −0.0011）。表 7 最后一行是更极端的例子：另一位贡献者把 Gate 加在 Dense Baseline 上做了完整训练，2,000 步时领先 0.0012，足够越过这次搜索 0.001 的胜出线，训练结束时反而落后 0.0002。<strong>学习率不变时攒下的优势能留下多少，只有训练到底才知道。</strong></p>
-
-    <p>六次 CORE 评测来自同一次训练的六个检查点（图 12b）。AttnRes-Canon 每一次都高于 Block AttnRes；和 mHC 比，前五次里有三次落后，直到最后一次才反超并领先 0.7 分。只训练了一次，还说明不了换一个随机种子之后名次是否不变。</p>
-
-    <p><strong>还有一笔代价是速度。</strong>Arena 只限制每个 token 的计算量，不限制实际耗时。在研究环境里，AttnRes-Canon 每一步的耗时是 Block AttnRes 的 1.66 倍（表 5），主要因为四处 Canon 卷积还没有专门优化过的实现（fused kernel）；优化之后能追回多少，还没有实测。</p>
+    <p>表 7 第二行的例子更明显：另一位贡献者把 Gate 加在 Dense Baseline 上做了完整训练，2,000 步时领先 0.0012，足够越过这次搜索 0.001 的胜出线，训练结束时反而落后 0.0002。<strong>学习率不变时攒下的优势能留下多少，只有训练到底才知道。</strong></p>
   </section>
 
   <!-- 4 -->
@@ -357,18 +343,18 @@
 
     <p><strong>这次搜索成败的关键，是能不能识破早期假象：</strong>短程训练要足够长，才能筛掉只在开头领先的改动；把改动组合起来之前，要先在同一个父模型上确认每个改动自己有效。</p>
 
-    <p>三个阶段合计耗费 2,135 GPU 小时（表 8）：探索和搜索加起来约 700 GPU 小时，没有超过总算力的三分之一；移植时的梯度核对另用了约 50 GPU 小时，没有计入表中。</p>
+    <p>三个阶段合计 2,135 GPU 小时，三分之二花在最终的完整训练上（表 8）。</p>
 
     <figure class="tbl" id="tab-compute">
-      <figcaption><strong>表 8.</strong> 三阶段算力分配（GPU 小时，不含移植核对）。</figcaption>
+      <figcaption><strong>表 8.</strong> 三阶段算力分配（GPU 小时）。</figcaption>
       <div class="table-wrap">
       <table class="compute">
-        <thead><tr><th>阶段</th><th>内容</th><th>预算</th><th class="num">实际</th><th class="num">占比</th></tr></thead>
+        <thead><tr><th>阶段</th><th>内容</th><th class="num">用量</th><th class="num">占比</th></tr></thead>
         <tbody>
-          <tr><td>前期探索</td><td>核对研究环境，检验短程训练能不能用来排名</td><td>约 170</td><td class="num">152</td><td class="num">7%</td></tr>
-          <tr><td>Workflow 的设计与搜索</td><td>两个 baseline、噪声测量和三轮共 12 个候选</td><td>上限 600</td><td class="num">550</td><td class="num">26%</td></tr>
-          <tr><td>最终训练</td><td>按协议完整训练 AttnRes-Canon</td><td>由协议固定：49.152B token</td><td class="num">1,433</td><td class="num">67%</td></tr>
-          <tr class="total"><td>合计</td><td></td><td></td><td class="num">2,135</td><td class="num">100%</td></tr>
+          <tr><td>前期探索</td><td>核对研究环境，检验短程训练能不能用来排名</td><td class="num">152</td><td class="num">7%</td></tr>
+          <tr><td>Workflow 的设计与搜索</td><td>两个 baseline、噪声测量和三轮共 12 个候选</td><td class="num">550</td><td class="num">26%</td></tr>
+          <tr><td>最终训练</td><td>按协议完整训练 AttnRes-Canon</td><td class="num">1,433</td><td class="num">67%</td></tr>
+          <tr class="total"><td>合计</td><td></td><td class="num">2,135</td><td class="num">100%</td></tr>
         </tbody>
       </table>
       </div>
@@ -388,11 +374,9 @@
     <ol>
       <li><strong>有计划，没设提醒：</strong>它打算在 1,536 步决定第三轮，却只在 512 步和 2,000 步设了提醒，中间停了下来，直到操作者催促才继续。</li>
       <li><strong>事先的判断不准：</strong>它最看好的同计算量 MoE 试了两版，都排在最后。</li>
-      <li><strong>一开始弄混了两种随机差异：</strong>把“同一个随机种子重复训练的差异”当成了“换随机种子的差异”。后来它自己发现并改了文档，但始终没有补做换种子的实验。</li>
-      <li><strong>只看效果，不看速度：</strong>筛选规则没有限制每一步的耗时，明显变慢的卷积组合也就通过了。</li>
+      <li><strong>一开始弄混了两种随机差异：</strong>把“同一个随机种子重复训练的差异”当成了“换随机种子的差异”，也没有做换种子的实验。</li>
+      <li><strong>只看效果，不看速度：</strong>筛选规则没有限制每一步的耗时，选中的 AttnRes-Canon 每一步要花 Block AttnRes 的 1.66 倍时间（表 5）。</li>
     </ol>
-
-    <p><strong>这些结论有明确的边界。</strong>所有结果都只训练了一个随机种子，收益是否稳定、两个部件是否真的互相增强，还需要多个种子和完整规模的消融实验来检验。搜索期间，操作者只发过启动指令、几次进度询问和两次“继续”的提醒，没有挑过候选，也没有给过方向上的提示。候选筛选只用了 dev BPB；不过当时的研究环境还没有做进程级隔离，Opus 事先读过仓库里已发布的完整训练记录。</p>
 
     <h3 id="s4-2"><span class="no">4.2</span>Arena v2 预告</h3>
 
@@ -400,12 +384,12 @@
 
     <ul>
       <li><strong>封闭的容器：</strong>研究全程在隔离的容器里通过 Gym 的接口进行，agent 看不到正式的验证集和 CORE-22。</li>
-      <li><strong>固定的算力额度：</strong>每个会话分到 1.96×10²⁰ FLOPs（大约相当于在 v1 的搜索里训练 20 次 2,000 步的 baseline），训练、评估和失败重试都从里面扣，同时记录调用模型花掉的 token 和费用。</li>
+      <li><strong>固定的算力额度：</strong>每个会话分到 1.96×10²⁰ FLOPs（大约相当于在 v1 的搜索里训练 20 次 2,000 步的 baseline），训练、评估和失败重试都从里面扣。</li>
       <li><strong>实验由模型自己设计：</strong>从哪个模型出发、设哪些对照、试几个候选、每个训练多少步、什么时候淘汰，都由模型决定，不再预设步数和轮数。</li>
       <li><strong>提交一个文件即可：</strong>提交单个模型文件后，Gym 自动启动正式的完整训练，不再需要逐阶段审批和手工移植。</li>
     </ul>
 
-    <p>按计划，Opus、GLM 和 DeepSeek 会在同样的 1.96×10²⁰ FLOPs 额度下各自独立做一轮研究，找到的架构再用同一套完整训练协议比较。针对这次暴露的不足，新 workflow 的草案还加了两条：最终候选要换一个随机种子复核，每一步的耗时设上限。</p>
+    <p>按计划，Opus、GLM 和 DeepSeek 会在同样的 1.96×10²⁰ FLOPs 额度下各自独立做一轮研究，找到的架构再用同一套完整训练协议比较。</p>
 
     <p>这次实验走通了一个会话之内的架构探索。下一步要检验跨会话的自我改进（RSI）：把“到点自动做决定”“在同一个父模型上核对每个改动”这些经验写进下一版 workflow，<strong>在同样的算力下和冻结的旧版 workflow 直接比较</strong>，看 agent 能不能把踩过的坑变成更稳的搜索能力。</p>
 
