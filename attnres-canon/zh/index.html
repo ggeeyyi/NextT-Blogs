@@ -1,0 +1,439 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Opus 如何找到 AttnRes-Canon：一次架构探索的 Discovery Trace</title>
+  <meta name="description" content="我们在 NextTransformer 的 Arena v1 上做了一次 auto research 尝试：Claude Opus 自己设计、筛选架构，找到了 AttnRes-Canon。本文回顾这次搜索的过程、现象和经验。">
+  <meta property="og:type" content="article">
+  <meta property="og:title" content="Opus 如何找到 AttnRes-Canon：一次架构探索的 Discovery Trace">
+  <meta property="og:description" content="Claude Opus 在 NextTransformer Arena v1 上自己设计、筛选架构，找到了排行榜第一的 AttnRes-Canon。">
+  <meta property="og:image" content="https://interactive-active-ai.github.io/NextTransformer/brand/social-preview.jpg">
+  <link rel="icon" href="../favicon.svg" type="image/svg+xml">
+  <link rel="alternate" hreflang="en" href="../">
+  <link rel="stylesheet" href="../styles.css">
+</head>
+<body>
+<div class="dream-sky" aria-hidden="true"><i></i><i></i><span>✦</span><span>✧</span><span>✦</span></div>
+<div class="progress" aria-hidden="true"><span></span></div>
+<header class="topbar">
+  <div class="brand-cluster">
+    <a class="brand" href="https://interactive-active-ai.github.io/NextTransformer/" aria-label="NextTransformer Observatory"><span class="brand-mark" aria-hidden="true">N<span>↗</span></span><b>NextTransformer</b></a>
+    <a class="iaai-brand" href="https://github.com/Interactive-Active-AI" aria-label="IAAI · Interactive &amp; Active AI"><img src="../assets/iaai.png" width="34" height="34" alt="IAAI logo"><b>IAAI</b><span>Interactive <i>&amp;</i> Active AI</span></a>
+  </div>
+  <nav class="header-actions" aria-label="站点链接">
+    <a class="header-link" href="../../">Blog</a>
+    <a class="header-link" href="https://interactive-active-ai.github.io/NextTransformer/">Observatory</a>
+    <a class="header-link" href="https://interactive-active-ai.github.io/NextTransformer/docs/zh-cn/">文档</a>
+    <a class="repo-button" href="https://github.com/Interactive-Active-AI/NextTransformer" aria-label="NextTransformer on GitHub"><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg><span>GitHub</span></a>
+    <a class="pill" href="../" hreflang="en" lang="en">English</a>
+    <button id="theme-toggle" class="pill" type="button" aria-label="切换浅色或深色主题">深色</button>
+  </nav>
+</header>
+
+<div class="page">
+<nav class="rail" aria-label="章节导航">
+  <div class="rail-title">本文内容</div>
+  <ol>
+    <li><a href="#s1"><span>01</span>前期探索</a></li>
+    <li><a href="#s2"><span>02</span>Workflow 设计</a></li>
+    <li><a href="#s3"><span>03</span>搜索与结果</a></li>
+    <li class="sub"><a href="#s3-1">搜索路径</a></li>
+    <li class="sub"><a href="#s3-2">第一轮</a></li>
+    <li class="sub"><a href="#s3-3">第二轮</a></li>
+    <li class="sub"><a href="#s3-4">第三轮</a></li>
+    <li class="sub"><a href="#s3-5">完整训练结果</a></li>
+    <li><a href="#s4"><span>04</span>总结与展望</a></li>
+    <li class="sub"><a href="#s4-1">Arena v1 复盘</a></li>
+    <li class="sub"><a href="#s4-2">Arena v2 预告</a></li>
+  </ol>
+</nav>
+
+<main id="top">
+<article>
+  <header class="post-head">
+    <p class="eyebrow">NextTransformer Blog / Arena v1</p>
+    <h1>Opus 如何找到 AttnRes-Canon<span class="sr">：</span><em>一次架构探索的 Discovery Trace</em></h1>
+    <p class="post-meta"><span>葛羿</span><span>2026 年 11 月</span><span>约 10 分钟阅读</span></p>
+  </header>
+
+  <div class="abstract">
+    <div class="abstract-label">摘要</div>
+    <p>我们在 NextTransformer 的 Arena v1 上做了一次 auto research（自动研究）尝试：让 Claude Opus 5.5 自己设计、筛选 Transformer 架构，人只审批计划和预算。整个过程分三步：前期探索，workflow 设计与三轮搜索，最后是完整训练。搜索时每个候选只训练 2,000 步，约为完整训练步数的 4%，只看训练 loss 和 dev 划分上的 BPB；探索与搜索合计的算力不超过总预算的三分之一。胜出的架构再按固定协议从头训练 49.152B token，按 CORE-22 得分排名。最终找到的 AttnRes-Canon 把 Full AttnRes 和四处 Canon 层结合在一起：完整训练后 CORE 得分 35.99，比搜索的起点 Block AttnRes 高 2.0 分，验证 BPB 低 0.0024，两项在排行榜已发布的结果里都排第一。</p>
+  </div>
+
+  <nav class="toc" aria-label="本文内容">
+    <div class="toc-title">本文内容</div>
+    <ol>
+      <li><a href="#s1">Agent 的前期探索</a></li>
+      <li><a href="#s2">搜索 Workflow 设计</a></li>
+      <li><a href="#s3">三轮搜索与完整训练</a></li>
+      <li class="sub"><a href="#s3-1">3.1 搜索全局与演进路径</a></li>
+      <li class="sub"><a href="#s3-2">3.2 第一轮：单点改动与早期假象</a></li>
+      <li class="sub"><a href="#s3-3">3.3 第二轮：组合验证与边际贡献</a></li>
+      <li class="sub"><a href="#s3-4">3.4 第三轮：共同父模型对照与最终组合</a></li>
+      <li class="sub"><a href="#s3-5">3.5 完整训练结果</a></li>
+      <li><a href="#s4">总结与展望</a></li>
+      <li class="sub"><a href="#s4-1">4.1 Arena v1 实验复盘</a></li>
+      <li class="sub"><a href="#s4-2">4.2 Arena v2 预告</a></li>
+    </ol>
+  </nav>
+
+
+  <!-- 1 -->
+  <section id="s1">
+    <p class="eyebrow">01 / 探索</p>
+    <h2>Agent 的前期探索</h2>
+
+    <p>交给 Opus 的任务很简单：在 Arena v1 的规则下改进 Transformer 的模型结构，让它完整训练之后，在 CORE-22 上超过排行榜上已有的方法。规则只有四条：</p>
+
+    <div class="cards">
+      <div><span>01</span><p class="card-title">固定不变</p><p>训练数据、46,875 步的训练长度、每个 token 的计算量（FLOPs，允许 ±1%）都锁死，对所有方法一样。</p></div>
+      <div><span>02</span><p class="card-title">可以改</p><p>只有模型结构。每个想法是一个“候选”，在同样的条件下训练。</p></div>
+      <div><span>03</span><p class="card-title">怎么评分</p><p>完整训练后看 CORE-22：22 项任务的平均得分，越高越好。同时报告验证 BPB，越低越好。</p></div>
+      <div><span>04</span><p class="card-title">搜索时能看什么</p><p>只有训练 loss 和 dev 划分上的 BPB（bits per byte，预测每个字节平均要用的 bit 数，越低越好）。</p></div>
+    </div>
+
+    <p>难处在于贵。完整训练一次要 1,400 多 GPU 小时，不可能把每个想法都训练到底。Opus 只能让每个候选先训练一小段（下文叫短程训练），用这一小段的 dev BPB 去猜它最终的表现。这把“尺子”要是不准，后面试得再多也是碰运气。所以动手改模型之前，它先花了约 150 GPU 小时做前期探索，回答两个问题。</p>
+
+    <p><strong>第一个问题：研究环境里的训练和正式训练是一回事吗？</strong>是。同一个方法在两边各训练 512 步，第 1 步的 loss 完全相同，之后的差别平均不到 0.004，只来自 GPU 运算本身的微小随机性。</p>
+
+    <p><strong>第二个问题：训练截短以后，排出的名次还准吗？</strong>这要看怎么截。完整训练的学习率先保持不变，后半程才逐渐降下来，这个安排叫学习率调度（schedule）。截短有两种办法（图 1）：“压缩”把整条调度原样挤进 512 步；“前缀”不动调度，只取正式训练最前面的一段。</p>
+
+    <figure class="wide" id="fig-shorten">
+      <div class="fig-body" data-figure="shorten"></div>
+      <figcaption><strong>图 1.</strong> 两种截短训练的办法。</figcaption>
+    </figure>
+
+    <p>Opus 先试了压缩：拿 11 个已有完整成绩的方法，各用压缩调度训练 512 步（约为完整训练的 1%），再和它们的最终名次对比（图 2）。</p>
+
+    <figure class="wide" id="fig-proxy">
+      <div class="fig-body" data-figure="slope"></div>
+      <figcaption><strong>图 2.</strong> 短程排名与最终排名。</figcaption>
+    </figure>
+
+    <p><strong>压缩调度排不准名次。</strong>两组名次的 Spearman 相关只有 0.40（1 表示名次完全一致，0 表示毫无关系），远低于事先定下的 0.85 标准；在最终 BPB 相差超过 0.005 的 46 对方法里，短程训练只排对了 31 对。错得还很有规律：四个 loop 类方法（同一组层反复执行）名次全部下降，四个 linear attention 类方法全部上升。学习率提前降下来，帮了收敛快的 loop 结构，却让起步慢的 linear attention 来不及发力。</p>
+
+    <p>换成前缀就好得多。用这 11 个方法已发布的完整训练曲线回头去验（图 3）：同样在 500 步左右，前缀的 Spearman 是 0.72；<strong>取到前 2,000 步时达到 0.92</strong>，过了标准。</p>
+
+    <figure class="wide" id="fig-backtest">
+      <div class="fig-body" data-figure="backtest"></div>
+      <figcaption><strong>图 3.</strong> 前缀长度与排名可信度。</figcaption>
+    </figure>
+
+    <p>尺子就这样定下来：不动学习率调度，直接训练正式调度的前 2,000 步。512 步时只淘汰明显训练失败的候选，名次和胜负都等到 2,000 步再定。</p>
+  </section>
+
+  <!-- 2 -->
+  <section id="s2">
+    <p class="eyebrow">02 / Workflow</p>
+    <h2>搜索 Workflow 设计</h2>
+
+    <p>有了尺子，Opus 把探索的结论写成一套搜索规则（图 4、表 1）。规则经操作者批准后不再改动：最多搜三轮，总算力不超过 600 GPU 小时。</p>
+
+    <figure class="wide" id="fig-workflow">
+      <div class="fig-body" data-figure="workflow"></div>
+      <figcaption><strong>图 4.</strong> 搜索的 workflow。</figcaption>
+    </figure>
+
+    <figure class="tbl wide" id="tab-rules">
+      <figcaption><strong>表 1.</strong> 探索结论与对应规则。</figcaption>
+      <div class="table-wrap">
+      <table class="plain">
+        <thead><tr><th>前期探索的结论</th><th>workflow 里的规则</th></tr></thead>
+        <tbody>
+          <tr><td>研究环境里的训练和正式训练一致</td><td>搜索全程在研究环境里做，胜出者移植后直接进入完整训练</td></tr>
+          <tr><td>压缩调度排不准名次（Spearman 0.40）</td><td>不压缩调度，只取正式调度的前缀</td></tr>
+          <tr><td>前 500 步的排名还不够准（Spearman 0.72，标准是 0.85）</td><td>512 步只设宽松的底线：比 Dense Baseline 差 0.030 以上才提前停掉</td></tr>
+          <tr><td>前 2,000 步的排名够准（Spearman 0.92）</td><td>候选的名次和胜负一律看 2,000 步</td></tr>
+          <tr><td>同样的训练重复一次，结果也会差一点（记为 δ）</td><td>先测 δ；候选要比最好的 baseline 低 max(2δ, 0.001) 才算胜出</td></tr>
+          <tr><td>起步慢的结构在 2,000 步仍会被低估</td><td>记为已知盲区，混入 linear attention 层（KDA）的想法暂缓</td></tr>
+        </tbody>
+      </table>
+      </div>
+    </figure>
+
+    <p class="list-lead">执行时还有两条约定：</p>
+
+    <ul>
+      <li><strong>胜出线以 Block AttnRes 为准：</strong>搜索先训练两个 baseline：Arena 的 Dense Baseline，和当时排行榜上最强的 Block AttnRes（排行榜上叫 AttnRes）。用同一个随机种子把 Dense Baseline 再训练一次，2,000 步时两次结果的差距 δ 约为 0.0004。据此，候选的 dev BPB 要比 Block AttnRes 低 0.001 以上才算胜出。</li>
+      <li><strong>一次只改一处，逐轮叠加：</strong>每个候选相对它的父模型（被改动的那个模型）只改一处，事先写下可以被实验推翻的假设，计算量保持在参考成本的 ±1% 以内。下一轮可以拿上一轮的候选当父模型，改动就这样一轮轮叠起来。</li>
+    </ul>
+  </section>
+
+  <!-- 3 -->
+  <section id="s3">
+    <p class="eyebrow">03 / 搜索</p>
+    <h2>三轮搜索与完整训练</h2>
+
+    <h3 id="s3-1"><span class="no">3.1</span>搜索全局与演进路径</h3>
+
+    <p>搜索从 Block AttnRes 出发，三轮一共训练了 12 个候选，<strong>其中 4 个越过了胜出线</strong>（图 5）。加上 baseline 和噪声测量，共用约 550 GPU 小时，没有超过 600 的上限。512 步的底线没有淘汰任何候选：当时最差的一个也只比 Dense Baseline 差 0.010。</p>
+
+    <figure class="wide" id="fig-lineage">
+      <div class="fig-body" data-figure="lineage"></div>
+      <figcaption><strong>图 5.</strong> 搜索路径。</figcaption>
+    </figure>
+
+    <p>第一轮的五个候选其实都没过线。图中加粗的路径留下了当时最接近过线的两个改动，Full AttnRes 和 Canon-A/C；第二轮把它们扩展、组合，第三轮再合到一起，得到最终的 AttnRes-Canon。</p>
+
+    <h3 id="s3-2"><span class="no">3.2</span>第一轮：单点改动与早期假象</h3>
+
+    <p>起点 Block AttnRes 把 23 层分成 8 组，让每一层都能回头读取前面各组的输出。第一轮在它上面各试一处改动，共五个：前三个来自近期论文，后两个调整模型的深宽比和参数分配（表 2）。</p>
+
+    <figure class="tbl wide" id="tab-round1">
+      <figcaption><strong>表 2.</strong> 第一轮的五个单点改动（相对 Block AttnRes 的 dev BPB 差值，越低越好）。</figcaption>
+      <div class="table-wrap">
+      <table>
+        <thead><tr><th>改动</th><th>当时写下的假设</th><th class="num nw">512 步</th><th class="num nw">2,000 步</th></tr></thead>
+        <tbody>
+          <tr><td>Full AttnRes：分组从 8 个细分到 23 个，每一层都能单独读取前面的任意一层 <a class="cite" href="#ref-1">[1]</a></td><td>能取回更细的早期信息</td><td class="num">−0.0010</td><td class="num"><strong>−0.0008</strong></td></tr>
+          <tr><td>Canon-A/C：在注意力（A）和 MLP（C）的入口各加一个宽度为 4 的小卷积 <a class="cite" href="#ref-2">[2]</a></td><td>用很小的代价混合相邻 token 的信息</td><td class="num">−0.0006</td><td class="num">−0.0006</td></tr>
+          <tr><td>Gate：给每个注意力 head 的输出加一个可学习的开关（sigmoid gate）<a class="cite" href="#ref-3">[3]</a></td><td>按输入内容调节每个 head 的输出，去掉无效的注意力</td><td class="num"><strong>−0.0027</strong></td><td class="num">+0.0006</td></tr>
+          <tr><td>Deep-narrow：把 FFN 缩到协议允许的最窄，层数从 23 加到 27</td><td>同样的计算量，多几层比加宽 FFN 更划算</td><td class="num">+0.0076</td><td class="num">+0.0027</td></tr>
+          <tr><td>每层都加 value embedding</td><td>几乎不增加计算量，多出约 0.55B 参数</td><td class="num">+0.0022</td><td class="num">+0.0007</td></tr>
+        </tbody>
+      </table>
+      </div>
+    </figure>
+
+    <p>训练到 2,000 步，没有一个候选越过 −0.0010 的胜出线，最接近的是 Full AttnRes（−0.0008）和 Canon-A/C（−0.0006）。<strong>Gate 早期的大幅领先是假象</strong>：512 步时它低了 0.0027，全场第一；到 1,000 步左右优势就没了，2,000 步反而落后 0.0006（图 6）。</p>
+
+    <figure class="wide" id="fig-round1">
+      <div class="fig-body" data-figure="round1"></div>
+      <figcaption><strong>图 6.</strong> 第一轮候选相对 Block AttnRes 的 dev BPB 差值（越低越好）。</figcaption>
+    </figure>
+
+    <h3 id="s3-3"><span class="no">3.3</span>第二轮：组合验证与边际贡献</h3>
+
+    <p>规则只规定 2,000 步定胜负，没有规定什么时候选下一轮的方向。第一轮刚出 512 步的结果，Opus 就照当时的名次定了第二轮要试的组合，又加了两个同计算量的 MoE 变体（把 FFN 换成多个小的 expert，每个 token 只用其中几个）<a class="cite" href="#ref-4">[4]</a>（表 3）。<strong>结果，早期领先的 Gate 占了一半的组合名额。</strong></p>
+
+    <figure class="tbl wide" id="tab-round2">
+      <figcaption><strong>表 3.</strong> 第二轮相对 Block AttnRes 的 dev BPB 差值（越低越好）。</figcaption>
+      <div class="table-wrap">
+      <table>
+        <thead><tr><th>候选</th><th class="num nw">512 步</th><th class="num nw">2,000 步</th><th>结果</th></tr></thead>
+        <tbody>
+          <tr><td>Canon-A–D：在 A/C 之外，给 q/k/v（B）和 MLP 隐层（D）也加上 Canon</td><td class="num">−0.0018</td><td class="num"><strong>−0.0021</strong></td><td>胜出</td></tr>
+          <tr><td>Full + Canon-A/C</td><td class="num">−0.0020</td><td class="num">−0.0018</td><td>胜出</td></tr>
+          <tr><td>Full + Gate</td><td class="num">−0.0025</td><td class="num">−0.0010</td><td>胜出（刚过线）</td></tr>
+          <tr><td>Gate + Canon-A/C</td><td class="num"><strong>−0.0038</strong></td><td class="num">−0.0001</td><td>未胜出</td></tr>
+          <tr><td>MoE：16 个半宽 expert，每个 token 选 4 个</td><td class="num">+0.0007</td><td class="num">+0.0016</td><td>未胜出</td></tr>
+          <tr><td>MoE：8 个 expert，每个 token 选 2 个</td><td class="num">+0.0055</td><td class="num">+0.0063</td><td>未胜出</td></tr>
+        </tbody>
+      </table>
+      </div>
+    </figure>
+
+    <p>这一轮有三个候选过线，但早期名次翻得比第一轮更彻底：前四名在 512 步和 2,000 步的顺序正好相反（图 7）。<strong>搅乱早期名次的还是 Gate</strong>：512 步时，带 Gate 的模型都比不带 Gate 的同款低 0.0014 到 0.0031；到 2,000 步，这点差距全部回到零附近。</p>
+
+    <figure class="wide" id="fig-round2">
+      <div class="fig-body" data-figure="round2"></div>
+      <figcaption><strong>图 7.</strong> 第二轮候选相对 Block AttnRes 的 dev BPB 差值（越低越好）。</figcaption>
+    </figure>
+
+    <p>训练之前，Opus 对 Full + Canon-A/C 和 Gate + Canon-A/C 的预期几乎一样：两处改动作用在模型的不同位置，收益应该能叠加。结果前者稳稳过线，后者几乎没动。原因要把每个改动单独拆出来看：同一个改动加到不同的父模型上，各能把 dev BPB 再降多少（图 8、表 4）。</p>
+
+    <figure class="wide" id="fig-marginal">
+      <div class="fig-body" data-figure="marginal"></div>
+      <figcaption><strong>图 8.</strong> 各项改动加在不同模型上的边际效果。</figcaption>
+    </figure>
+
+    <figure class="tbl wide" id="tab-marginal">
+      <figcaption><strong>表 4.</strong> 2,000 步时各项改动的边际效果（dev BPB 变化）。</figcaption>
+      <div class="table-wrap">
+      <table>
+        <thead><tr><th>加入的改动</th><th class="num">加在 Block AttnRes 上</th><th class="num">加在 Full AttnRes 上</th><th class="num">加在 Canon-A/C 上</th><th class="num">加在 Gate 上</th></tr></thead>
+        <tbody>
+          <tr><td>Full AttnRes</td><td class="num"><strong>−0.0008</strong></td><td class="num">—</td><td class="num"><strong>−0.0012</strong></td><td class="num"><strong>−0.0016</strong></td></tr>
+          <tr><td>Canon-A/C</td><td class="num">−0.0006</td><td class="num"><strong>−0.0010</strong></td><td class="num">—</td><td class="num">−0.0007</td></tr>
+          <tr><td>Gate</td><td class="num">+0.0006</td><td class="num">−0.0002</td><td class="num">+0.0005</td><td class="num">—</td></tr>
+        </tbody>
+      </table>
+      </div>
+    </figure>
+
+    <ul>
+      <li><strong>Full AttnRes 和 Canon 的收益是稳定的：</strong>不管加在哪个父模型上，2,000 步时都让 dev BPB 更低。</li>
+      <li><strong>Gate 没有净收益：</strong>三组结果有正有负，幅度和重复训练的随机差异（约 0.0004）差不多；Full + Gate 能过线，靠的是 Full AttnRes。</li>
+    </ul>
+
+    <p>“作用位置不同就能叠加”有个前提：每个改动自己得有效。Gate 自己没有收益，和别的改动组合也叠不出东西，第三轮不再考虑它。</p>
+
+    <h3 id="s3-4"><span class="no">3.4</span>第三轮：共同父模型对照与最终组合</h3>
+
+    <p>有了前两轮的教训，Opus 在第三轮等到第二轮训练到后段才做决定，没有再看 512 步的名次。这时站得住的只剩 Full AttnRes 和 Canon。第二轮正好有两个候选都以 Canon-A/C 为父模型，各往前走了一步：一个换成 Full AttnRes，另一个补上 B、D 两处，成为 Canon-A–D。放在同一个父模型下比，<strong>到 1,536 步两者都比 Canon-A/C 低约 0.002</strong>（图 9）。剩下的预算只够再训练一个候选，Opus 没等 Canon-A–D 训练完最后几百步，就决定把两者合起来，这就是 AttnRes-Canon。</p>
+
+    <figure class="wide" id="fig-basis">
+      <div class="fig-body" data-figure="basis"></div>
+      <figcaption><strong>图 9.</strong> 相对 Canon-A/C 父模型的 dev BPB 差值。</figcaption>
+    </figure>
+
+    <p><strong>AttnRes-Canon 在 2,000 步的 dev BPB 是 0.7965，比 Block AttnRes 低 0.0038，是整场搜索的第一名</strong>（表 5）。512 步时它还排第二，落后于 Gate + Canon-A/C；从 768 步起一直领先。相比 Block AttnRes，它只多了约 127 万个参数，不到模型总量的 0.1%。</p>
+
+    <figure class="tbl wide" id="tab-matrix">
+      <figcaption><strong>表 5.</strong> 两个方向的改动在 2,000 步的 dev BPB（Δ：相对 Block AttnRes 的差值）。</figcaption>
+      <div class="table-wrap">
+      <table class="matrix">
+        <thead><tr><th>深度组织 \ Canon</th><th class="num">无 Canon</th><th class="num">Canon-A/C</th><th class="num">Canon-A–D</th></tr></thead>
+        <tbody>
+          <tr><td>Block AttnRes（8&nbsp;组）</td><td class="num">0.8003<small>baseline</small><small>步时 ×1.00</small></td><td class="num">0.7997<small>Δ −0.0006</small><small>步时 ×1.10</small></td><td class="num">0.7982<small>Δ −0.0021</small><small>步时 ×1.47</small></td></tr>
+          <tr><td>Full AttnRes（23&nbsp;组）</td><td class="num">0.7995<small>Δ −0.0008</small><small>步时 ×1.19</small></td><td class="num">0.7985<small>Δ −0.0018</small><small>步时 ×1.30</small></td><td class="num"><strong>0.7965</strong><small>Δ −0.0038</small><small>步时 ×1.66</small></td></tr>
+        </tbody>
+      </table>
+      </div>
+    </figure>
+
+    <p>两个部件管的是两个方向（图 10）。Block AttnRes 的每一层只能读前面各组输出的总和，好比只能翻每一章的摘要；Full AttnRes 取消分组，每一层都能单独去读前面的任意一层。Canon 层是一个宽度为 4 的小卷积：处理当前 token 时，顺带把前三个 token 的信息混进来；它的权重从零开始，所以训练刚开始时和不加 Canon 完全一样。<strong>一个沿深度方向取信息，一个沿序列方向混合相邻 token</strong>，Opus 因此猜测两者合在一起会互相增强，效果超过各自相加。</p>
+
+    <figure class="wide" id="fig-mechanism">
+      <div class="fig-body" data-figure="mechanism"></div>
+      <figcaption><strong>图 10.</strong> Full AttnRes 与 Canon 层的作用方向。</figcaption>
+    </figure>
+
+    <p>表 5 的数字看上去支持这个猜测：从无 Canon 到 Canon-A/C 再到 Canon-A–D，把 Block 换成 Full 多带来的降幅依次是 −0.0008、−0.0012 和 −0.0017。但相邻两档只差 0.0004 到 0.0005，和重复训练的随机差异（约 0.0004）差不多大，而且都只训练了一个随机种子。<strong>现有数据和“互相增强”的猜测不矛盾，但还不够证明它。</strong></p>
+
+    <h3 id="s3-5"><span class="no">3.5</span>完整训练结果</h3>
+
+    <p>搜索只看得到训练最开头的一段，那时学习率还没有开始下降。这点优势能不能保持到最后，要靠完整训练来检验。我们把 AttnRes-Canon 移植成正式插件，逐项核对梯度一致之后，从头训练 49.152B token，耗时约 1,430 GPU 小时。评测看两个指标：验证 BPB，和 CORE-22（22 项任务扣除随机猜测水平后的平均得分，本文按排行榜的写法乘以 100，越高越好）。<strong>AttnRes-Canon 的 CORE 和验证 BPB 在 38 个已发布结果里都排第一</strong>；两项的第二名都是 mHC，一个在搜索开始之后才发布的跨层连接方法（表 6、图 11a）。</p>
+
+    <figure class="tbl" id="tab-formal">
+      <figcaption><strong>表 6.</strong> 完整训练后的结果。</figcaption>
+      <div class="table-wrap">
+      <table>
+        <thead><tr><th>方法</th><th class="num">CORE</th><th class="num">CORE（不含 BoolQ）</th><th class="num">验证 BPB</th></tr></thead>
+        <tbody>
+          <tr><td>Dense Baseline</td><td class="num">33.10</td><td class="num">34.46</td><td class="num">0.6672</td></tr>
+          <tr><td>Block AttnRes</td><td class="num">34.00</td><td class="num">35.96</td><td class="num">0.6630</td></tr>
+          <tr><td>mHC</td><td class="num">35.33</td><td class="num">36.23</td><td class="num">0.6617</td></tr>
+          <tr><td>AttnRes-Canon</td><td class="num"><strong>35.99</strong></td><td class="num"><strong>36.70</strong></td><td class="num"><strong>0.6605</strong></td></tr>
+        </tbody>
+      </table>
+      </div>
+    </figure>
+
+    <figure class="wide" id="fig-context">
+      <div class="fig-body" data-figure="context"></div>
+      <figcaption><strong>图 11.</strong> 完整训练后的 CORE 与验证 BPB。</figcaption>
+    </figure>
+
+    <p><strong>CORE 上 2.0 分的领先要打个折扣。</strong>和 Block AttnRes 相比，22 项任务里 AttnRes-Canon 有 16 项更好、2 项持平、4 项更差；但高的 2.0 分里，BoolQ（一项是非判断题）一项就占了 1.3 分（图 11b），去掉它之后，领先缩小到 0.7 分。</p>
+
+    <p><strong>验证 BPB 的领先从头保持到尾，但后半程缩小了一半多。</strong>和 Block AttnRes 的差距在 2,000 步是 0.0037，学习率不变的阶段拉大到近 0.006，学习率开始下降后被追回大半，最后停在 0.0024（图 12a、表 7）。</p>
+
+    <figure class="wide" id="fig-formal">
+      <div class="fig-body" data-figure="formal"></div>
+      <figcaption><strong>图 12.</strong> 完整训练中相对 Block AttnRes 的差值。</figcaption>
+    </figure>
+
+    <figure class="tbl wide" id="tab-gap">
+      <figcaption><strong>表 7.</strong> 完整训练中三个时间点的验证 BPB 差值。</figcaption>
+      <div class="table-wrap">
+      <table>
+        <thead><tr><th>比较</th><th class="num nw">2,000 步</th><th class="num">学习率不变的阶段（10K–16K 步平均）</th><th class="num">终点</th></tr></thead>
+        <tbody>
+          <tr><td>AttnRes-Canon 相对 Block AttnRes</td><td class="num">−0.0037</td><td class="num">−0.0058</td><td class="num">−0.0024</td></tr>
+          <tr><td>mHC 相对 Block AttnRes</td><td class="num">−0.0003</td><td class="num">−0.0043</td><td class="num">−0.0013</td></tr>
+          <tr><td>AttnRes-Canon 相对 mHC</td><td class="num">−0.0034</td><td class="num">−0.0015</td><td class="num">−0.0011</td></tr>
+          <tr><td>Dense Baseline + Gate 相对 Dense Baseline</td><td class="num">−0.0012</td><td class="num">−0.0004</td><td class="num">+0.0002</td></tr>
+        </tbody>
+      </table>
+      </div>
+    </figure>
+
+    <p>差距缩小，主要是因为 Block AttnRes 自己在学习率下降的阶段进步得更快：同一时段 mHC 对 Block AttnRes 的领先也缩了大半，而 AttnRes-Canon 对 mHC 的领先几乎没变（−0.0015 到 −0.0011）。表 7 最后一行是更极端的例子：另一位贡献者把 Gate 加在 Dense Baseline 上做了完整训练，2,000 步时领先 0.0012，足够越过这次搜索 0.001 的胜出线，训练结束时反而落后 0.0002。<strong>学习率不变时攒下的优势能留下多少，只有训练到底才知道。</strong></p>
+
+    <p>六次 CORE 评测来自同一次训练的六个检查点（图 12b）。AttnRes-Canon 每一次都高于 Block AttnRes；和 mHC 比，前五次里有三次落后，直到最后一次才反超并领先 0.7 分。只训练了一次，还说明不了换一个随机种子之后名次是否不变。</p>
+
+    <p><strong>还有一笔代价是速度。</strong>Arena 只限制每个 token 的计算量，不限制实际耗时。在研究环境里，AttnRes-Canon 每一步的耗时是 Block AttnRes 的 1.66 倍（表 5），主要因为四处 Canon 卷积还没有专门优化过的实现（fused kernel）；优化之后能追回多少，还没有实测。</p>
+  </section>
+
+  <!-- 4 -->
+  <section id="s4">
+    <p class="eyebrow">04 / 总结</p>
+    <h2>总结与展望</h2>
+
+    <h3 id="s4-1"><span class="no">4.1</span>Arena v1 实验复盘</h3>
+
+    <p><strong>这次搜索成败的关键，是能不能识破早期假象：</strong>短程训练要足够长，才能筛掉只在开头领先的改动；把改动组合起来之前，要先在同一个父模型上确认每个改动自己有效。</p>
+
+    <p>三个阶段合计耗费 2,135 GPU 小时（表 8）：探索和搜索加起来约 700 GPU 小时，没有超过总算力的三分之一；移植时的梯度核对另用了约 50 GPU 小时，没有计入表中。</p>
+
+    <figure class="tbl" id="tab-compute">
+      <figcaption><strong>表 8.</strong> 三阶段算力分配（GPU 小时，不含移植核对）。</figcaption>
+      <div class="table-wrap">
+      <table class="compute">
+        <thead><tr><th>阶段</th><th>内容</th><th>预算</th><th class="num">实际</th><th class="num">占比</th></tr></thead>
+        <tbody>
+          <tr><td>前期探索</td><td>核对研究环境，检验短程训练能不能用来排名</td><td>约 170</td><td class="num">152</td><td class="num">7%</td></tr>
+          <tr><td>Workflow 的设计与搜索</td><td>两个 baseline、噪声测量和三轮共 12 个候选</td><td>上限 600</td><td class="num">550</td><td class="num">26%</td></tr>
+          <tr><td>最终训练</td><td>按协议完整训练 AttnRes-Canon</td><td>由协议固定：49.152B token</td><td class="num">1,433</td><td class="num">67%</td></tr>
+          <tr class="total"><td>合计</td><td></td><td></td><td class="num">2,135</td><td class="num">100%</td></tr>
+        </tbody>
+      </table>
+      </div>
+    </figure>
+
+    <p class="list-lead">Opus 做对的四件事：</p>
+
+    <ol>
+      <li><strong>先校准尺子，再开始搜索：</strong>发现压缩调度会成系统地排错名次之后，改用正式调度的前 2,000 步。</li>
+      <li><strong>一次只改一处：</strong>每个候选相对父模型只改一处，并事先写下可被推翻的假设；第二轮因此能把每个改动的贡献单独拆出来。</li>
+      <li><strong>等信号够长再做组合：</strong>第三轮不再看 512 步的名次，改在同一个父模型 Canon-A/C 上比到 1,536 步才合并。</li>
+      <li><strong>把文件当作记忆：</strong>四天里对话上下文被压缩了 7 次，每次都靠写在文件里的候选笔记和选择记录接着做下去。</li>
+    </ol>
+
+    <p class="list-lead">暴露的四处不足：</p>
+
+    <ol>
+      <li><strong>有计划，没设提醒：</strong>它打算在 1,536 步决定第三轮，却只在 512 步和 2,000 步设了提醒，中间停了下来，直到操作者催促才继续。</li>
+      <li><strong>事先的判断不准：</strong>它最看好的同计算量 MoE 试了两版，都排在最后。</li>
+      <li><strong>一开始弄混了两种随机差异：</strong>把“同一个随机种子重复训练的差异”当成了“换随机种子的差异”。后来它自己发现并改了文档，但始终没有补做换种子的实验。</li>
+      <li><strong>只看效果，不看速度：</strong>筛选规则没有限制每一步的耗时，明显变慢的卷积组合也就通过了。</li>
+    </ol>
+
+    <p><strong>这些结论有明确的边界。</strong>所有结果都只训练了一个随机种子，收益是否稳定、两个部件是否真的互相增强，还需要多个种子和完整规模的消融实验来检验。搜索期间，操作者只发过启动指令、几次进度询问和两次“继续”的提醒，没有挑过候选，也没有给过方向上的提示。候选筛选只用了 dev BPB；不过当时的研究环境还没有做进程级隔离，Opus 事先读过仓库里已发布的完整训练记录。</p>
+
+    <h3 id="s4-2"><span class="no">4.2</span>Arena v2 预告</h3>
+
+    <p>在 v1 里，阶段审批、预算把关、什么时候停手和插件移植都还要人来做。Arena v2 计划用四项改动，把整个流程交给 agent 和 Gym：</p>
+
+    <ul>
+      <li><strong>封闭的容器：</strong>研究全程在隔离的容器里通过 Gym 的接口进行，agent 看不到正式的验证集和 CORE-22。</li>
+      <li><strong>固定的算力额度：</strong>每个会话分到 1.96×10²⁰ FLOPs（大约相当于在 v1 的搜索里训练 20 次 2,000 步的 baseline），训练、评估和失败重试都从里面扣，同时记录调用模型花掉的 token 和费用。</li>
+      <li><strong>实验由模型自己设计：</strong>从哪个模型出发、设哪些对照、试几个候选、每个训练多少步、什么时候淘汰，都由模型决定，不再预设步数和轮数。</li>
+      <li><strong>提交一个文件即可：</strong>提交单个模型文件后，Gym 自动启动正式的完整训练，不再需要逐阶段审批和手工移植。</li>
+    </ul>
+
+    <p>按计划，Opus、GLM 和 DeepSeek 会在同样的 1.96×10²⁰ FLOPs 额度下各自独立做一轮研究，找到的架构再用同一套完整训练协议比较。针对这次暴露的不足，新 workflow 的草案还加了两条：最终候选要换一个随机种子复核，每一步的耗时设上限。</p>
+
+    <p>这次实验走通了一个会话之内的架构探索。下一步要检验跨会话的自我改进（RSI）：把“到点自动做决定”“在同一个父模型上核对每个改动”这些经验写进下一版 workflow，<strong>在同样的算力下和冻结的旧版 workflow 直接比较</strong>，看 agent 能不能把踩过的坑变成更稳的搜索能力。</p>
+
+    <p class="links">这条结果在 <a href="https://interactive-active-ai.github.io/NextTransformer/">Observatory</a> 的排行榜和 Arena 页面上；正式运行记录、披露卡和方法代码：<a href="https://github.com/Interactive-Active-AI/NextTransformer/blob/main/results/runs/attnres_full_canon_abcd.json">运行记录</a> · <a href="https://github.com/Interactive-Active-AI/NextTransformer/blob/main/results/arena/attnres-canon.json">披露卡</a> · <a href="https://github.com/Interactive-Active-AI/NextTransformer/tree/main/nexttransformer/methods/attnres_full_canon_abcd">方法插件</a></p>
+  </section>
+
+  <section id="refs" class="references">
+    <h2>参考文献</h2>
+    <ol>
+      <li id="ref-1"><strong>Attention Residuals.</strong> Kimi Team. <em>arXiv preprint</em>, 2026. <a href="https://arxiv.org/abs/2603.15031">arXiv:2603.15031</a></li>
+      <li id="ref-2"><strong>Physics of Language Models: Part 4.1, Architecture Design and the Magic of Canon Layers.</strong> Zeyuan Allen-Zhu. <em>arXiv preprint</em>, 2025. <a href="https://arxiv.org/abs/2512.17351">arXiv:2512.17351</a></li>
+      <li id="ref-3"><strong>Gated Attention for Large Language Models: Non-linearity, Sparsity, and Attention-Sink-Free.</strong> Zihan Qiu et al. <em>arXiv preprint</em>, 2025. <a href="https://arxiv.org/abs/2505.06708">arXiv:2505.06708</a></li>
+      <li id="ref-4"><strong>Outrageously Large Neural Networks: The Sparsely-Gated Mixture-of-Experts Layer.</strong> Noam Shazeer et al. <em>ICLR</em>, 2017. <a href="https://arxiv.org/abs/1701.06538">arXiv:1701.06538</a></li>
+    </ol>
+  </section>
+</article>
+</main>
+</div>
+
+<div class="footer-wrap">
+<footer class="site-footer">
+  <a class="footer-brand" href="https://interactive-active-ai.github.io/NextTransformer/">NextTransformer <span>·</span> a study of computation</a>
+  <div><a href="https://interactive-active-ai.github.io/NextTransformer/">Observatory</a><a href="https://interactive-active-ai.github.io/NextTransformer/docs/zh-cn/">文档</a><a href="https://github.com/Interactive-Active-AI/NextTransformer">GitHub</a><a href="../" hreflang="en" lang="en">English</a><span>Arena v1 · 单种子结果</span></div>
+</footer>
+</div>
+
+<script src="../data.js"></script>
+<script src="../site.js"></script>
+<script src="../figures.js"></script>
+</body>
+</html>

@@ -1,6 +1,6 @@
 """Check the hand-written numbers of the blog against the arena v1 evidence.
 
-The tables in blog/index.html and blog/en/index.html are typed by hand, and so are the numbers in the prose. This script
+The tables in blog/index.html (English) and blog/zh/index.html (Chinese) are typed by hand, and so are the numbers in the prose. This script
 recomputes them from the repository's evidence and published run records, and fails if a page disagrees:
 - Table 1 (tab-rules) holds sentences; the numbers it quotes are among the prose numbers below;
 - Tables 2-4 (tab-round1, tab-round2, tab-marginal): dev BPB in
@@ -37,7 +37,7 @@ STAGE1 = ROOT / "evidence/checks/arena-v1-stage1-20261101"
 STAGE2 = ROOT / "evidence/checks/arena-v1-stage2-20261102"
 RUNS = ROOT / "results/runs"
 CARD = ROOT / "results/arena/attnres-canon.json"
-PAGES = {"zh": POST / "index.html", "en": POST / "en/index.html"}
+PAGES = {"zh": POST / "zh/index.html", "en": POST / "index.html"}
 DEV_RUN = {method: run for method, (_, run) in build_data.SEARCH.items()}
 DECAY_START = 16406   # 46,875 x (1 - 0.65): the last constant-LR evaluation is at update 16,250
 LAST = 46875

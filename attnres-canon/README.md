@@ -3,8 +3,9 @@
 A standalone, dependency-free post about how Claude Opus found AttnRes-Canon in NextTransformer Arena v1, in two
 synchronized versions:
 
-- `index.html`: Simplified Chinese, *Opus 如何找到 AttnRes-Canon：一次架构探索的 Discovery Trace*;
-- `en/index.html`: English, *How Opus Found AttnRes-Canon: The Discovery Trace of an Architecture Search*.
+- `index.html`: English, the default page, *How Opus Found AttnRes-Canon: The Discovery Trace of an Architecture Search*;
+- `zh/index.html`: Simplified Chinese, *Opus 如何找到 AttnRes-Canon：一次架构探索的 Discovery Trace*;
+- `en/index.html`: a redirect to the post, so that links to the English version's earlier address keep working.
 
 ## Files
 
