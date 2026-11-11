@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>NextTransformer Blogs</title>
+  <meta name="description" content="Research posts from NextTransformer, the open arena for Transformer architectures.">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <style>
+    :root {
+      color-scheme: light;
+      --page: #f6f8fb; --paper: #ffffff; --ink: #111827; --text-body: #22252a; --text-secondary: #52514e;
+      --text-muted: #898781; --border: #e3e6ec; --border-strong: #cdd5e1; --accent: #2a78d6; --accent-dark: #1c5cab;
+      --link: #1c5cab; --shadow: 0 18px 45px rgba(17, 24, 39, 0.07);
+      --font: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Noto Sans CJK SC",
+        "Microsoft YaHei", Roboto, "Noto Sans", Helvetica, Arial, sans-serif;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        color-scheme: dark;
+        --page: #0d0d0d; --paper: #151514; --ink: #f0efec; --text-body: #dddcd6; --text-secondary: #c3c2b7;
+        --text-muted: #898781; --border: #2a2a28; --border-strong: #3a3a37; --accent: #3987e5; --accent-dark: #86b6ef;
+        --link: #86b6ef; --shadow: none;
+      }
+    }
+    * { box-sizing: border-box; }
+    html { background: var(--page); }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: radial-gradient(circle at 16% 0%, color-mix(in srgb, var(--accent) 10%, transparent), transparent 28rem) no-repeat, var(--page);
+      color: var(--text-body);
+      font: 17px/1.7 var(--font);
+      -webkit-font-smoothing: antialiased;
+    }
+    main { max-width: 840px; margin: 0 auto; padding: 72px 16px 96px; }
+    .eyebrow { margin: 0 0 0.5rem; color: var(--accent-dark); font-size: 0.82rem; font-weight: 650; letter-spacing: 0.08em; }
+    h1 { margin: 0 0 0.6rem; color: var(--ink); font-size: 2.3rem; font-weight: 760; line-height: 1.2; }
+    .lead { margin: 0 0 2.6rem; color: var(--text-secondary); }
+    .post {
+      background: var(--paper); border: 1px solid var(--border); border-radius: 16px; box-shadow: var(--shadow);
+      padding: 26px 28px; margin-bottom: 20px;
+    }
+    .post-meta { margin: 0 0 0.6rem; color: var(--text-muted); font-size: 0.88rem; }
+    .post h2 { margin: 0 0 0.25rem; font-size: 1.32rem; font-weight: 740; line-height: 1.4; }
+    .post h2 + h2 { font-size: 1.08rem; font-weight: 620; }
+    .post h2 a { color: var(--ink); text-decoration: none; }
+    .post h2 a:hover { color: var(--link); }
+    .post p.summary { margin: 0.8rem 0 1rem; }
+    .langs { display: flex; gap: 10px; flex-wrap: wrap; margin: 0; padding: 0; list-style: none; font-size: 0.9rem; }
+    .langs a {
+      display: inline-block; color: var(--link); text-decoration: none; border: 1px solid var(--border-strong);
+      border-radius: 999px; padding: 3px 14px;
+    }
+    .langs a:hover { border-color: var(--accent); }
+    footer { margin-top: 3rem; color: var(--text-muted); font-size: 0.88rem; }
+    footer a { color: var(--link); }
+    @media (max-width: 600px) {
+      main { padding-top: 48px; }
+      h1 { font-size: 1.9rem; }
+      .post { padding: 20px 18px; }
+    }
+  </style>
+</head>
+<body>
+<main>
+  <p class="eyebrow">NEXTTRANSFORMER</p>
+  <h1>NextTransformer Blogs</h1>
+  <p class="lead">Research posts from the NextTransformer arena. / NextTransformer 的研究博客。</p>
+
+  <article class="post">
+    <p class="post-meta">November 2026 · Arena v1</p>
+    <h2 lang="zh-CN"><a href="attnres-canon/">Opus 如何找到 AttnRes-Canon：一次架构探索的 Discovery Trace</a></h2>
+    <h2><a href="attnres-canon/en/">How Opus Found AttnRes-Canon: The Discovery Trace of an Architecture Search</a></h2>
+    <p class="summary">We ran an auto-research experiment on NextTransformer Arena v1: Claude Opus designed and screened architectures on its own and found AttnRes-Canon. This post reviews the process, findings, and lessons of that search.</p>
+    <ul class="langs">
+      <li><a href="attnres-canon/" hreflang="zh-CN" lang="zh-CN">中文</a></li>
+      <li><a href="attnres-canon/en/" hreflang="en">English</a></li>
+    </ul>
+  </article>
+
+  <footer>
+    <a href="https://github.com/Interactive-Active-AI/NextTransformer">NextTransformer on GitHub</a>
+  </footer>
+</main>
+</body>
+</html>

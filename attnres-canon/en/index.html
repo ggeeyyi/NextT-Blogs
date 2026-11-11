@@ -1,0 +1,403 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>How Opus Found AttnRes-Canon: The Discovery Trace of an Architecture Search</title>
+  <meta name="description" content="We ran an auto-research experiment on NextTransformer Arena v1: Claude Opus designed and screened architectures on its own and found AttnRes-Canon. This post reviews the process, findings, and lessons of that search.">
+  <link rel="icon" href="../favicon.svg" type="image/svg+xml">
+  <link rel="alternate" hreflang="zh-CN" href="../">
+  <link rel="stylesheet" href="../styles.css">
+</head>
+<body>
+<div class="progress" aria-hidden="true"><span></span></div>
+<div class="top-actions">
+  <a class="pill" href="../" hreflang="zh-CN" lang="zh-CN">中文</a>
+  <button id="theme-toggle" class="pill" type="button" aria-label="Switch between light and dark theme">Dark</button>
+</div>
+
+<div class="page">
+<nav class="rail" aria-label="Sections">
+  <div class="rail-title">In this post</div>
+  <ol>
+    <li><a href="#s1"><span>1</span>Exploration</a></li>
+    <li><a href="#s2"><span>2</span>Workflow</a></li>
+    <li><a href="#s3"><span>3</span>Search and result</a></li>
+    <li class="sub"><a href="#s3-1">Search path</a></li>
+    <li class="sub"><a href="#s3-2">Round 1</a></li>
+    <li class="sub"><a href="#s3-3">Round 2</a></li>
+    <li class="sub"><a href="#s3-4">Round 3</a></li>
+    <li class="sub"><a href="#s3-5">Full-training results</a></li>
+    <li><a href="#s4"><span>4</span>Summary and outlook</a></li>
+    <li class="sub"><a href="#s4-1">Arena v1 review</a></li>
+    <li class="sub"><a href="#s4-2">Arena v2 preview</a></li>
+  </ol>
+</nav>
+
+<main id="top">
+<article>
+  <header class="post-head">
+    <p class="eyebrow">NextTransformer · Arena v1</p>
+    <h1>How Opus Found AttnRes-Canon: The Discovery Trace of an Architecture Search</h1>
+    <p class="post-meta"><span>Yi Ge</span><span>November 2026</span><span>About 10 min read</span></p>
+  </header>
+
+  <div class="abstract">
+    <div class="abstract-label">Abstract</div>
+    <p>We ran an auto-research experiment on NextTransformer's Arena v1, letting Claude Opus 5.5 design and screen Transformer architectures on its own. The work moved through early exploration, workflow design with three rounds of search, and full final training. Each search candidate trained for 2,000 updates, about 4% of a full run, and was judged only by training loss and dev-split BPB, while exploration and search together stayed within no more than one third of the total compute budget; the winner then trained from scratch for 49.152B tokens under a fixed protocol, within 1% of the reference training FLOPs, and was ranked by CORE-22. People approved plans and budgets, leaving candidate design and selection to the agent. The winning architecture, AttnRes-Canon, pairs Full AttnRes with four Canon layers: compared with Block AttnRes, its dev BPB was 0.0038 lower in the search, and after full training it reached 35.99 on CORE (up 2.0 points) and lowered validation BPB by 0.0024, ranking first on both among the published results.</p>
+  </div>
+
+  <nav class="toc" aria-label="In this post">
+    <div class="toc-title">In this post</div>
+    <ol>
+      <li><a href="#s1">The Agent's Early Exploration</a></li>
+      <li><a href="#s2">Designing the Search Workflow</a></li>
+      <li><a href="#s3">Three Search Rounds and Full Training</a></li>
+      <li class="sub"><a href="#s3-1">3.1 Overview and Search Path</a></li>
+      <li class="sub"><a href="#s3-2">3.2 Round 1: Single Changes and an Early Mirage</a></li>
+      <li class="sub"><a href="#s3-3">3.3 Round 2: Combinations and Marginal Contributions</a></li>
+      <li class="sub"><a href="#s3-4">3.4 Round 3: Shared-Parent Comparison and the Final Model</a></li>
+      <li class="sub"><a href="#s3-5">3.5 Results of Full Training</a></li>
+      <li><a href="#s4">Summary and Outlook</a></li>
+      <li class="sub"><a href="#s4-1">4.1 Takeaways from Arena v1</a></li>
+      <li class="sub"><a href="#s4-2">4.2 A Preview of Arena v2</a></li>
+    </ol>
+  </nav>
+
+
+  <!-- 1 -->
+  <section id="s1">
+    <h2>1. The Agent's Early Exploration</h2>
+
+    <p>The brief we gave Opus was straightforward: under Arena v1, with data, training length, and compute per update held fixed, change only the Transformer architecture and try to beat the published methods on CORE-22 after full training.</p>
+
+    <p>The catch is that a single full run takes well over a thousand GPU-hours, so search cannot afford to train every idea to the end. Opus had to judge candidates from short runs instead, using dev-split BPB (bits per byte, prediction loss per byte; lower is better) to guess how a full run would finish. If that short-run ruler is crooked, the rest of the search is guesswork. Before touching model code, Opus spent about 150 GPU-hours on exploration to check two things: whether the research trainer matches the formal trainer, and whether rankings from short runs still hold up.</p>
+
+    <p><strong>The research trainer and the formal trainer match.</strong> Trained for 512 updates in each, the same method gave the exact same loss at update 1, and the small differences after that, under 0.004 on average, came only from GPU non-determinism.</p>
+
+    <p>Cutting training short was the harder part. The natural first try was to squeeze the full learning-rate schedule into 512 updates (about 1% of a full run): run 11 methods that already had full-training results, then compare the short-run order with their final ranking (Figure 1).</p>
+
+    <figure class="wide" id="fig-proxy">
+      <div class="fig-body" data-figure="slope"></div>
+      <figcaption><strong>Figure 1.</strong> Short-run rank versus final rank.</figcaption>
+    </figure>
+
+    <p><strong>The compressed schedule ranked methods poorly.</strong> Spearman correlation between the two rankings was only 0.40 (1 means identical order), well below the 0.85 bar set beforehand; of the 46 pairs of methods whose final BPB differs by more than 0.005, the short runs ordered only 31 correctly. The errors also broke cleanly by family: from short runs to full training, all four looped methods (the same layers applied repeatedly) fell while all four linear-attention methods rose, sending DeepLoop from 3rd to last and KDA from 8th to 2nd. Early learning-rate decay flattered fast-converging looped models and cut off slow-starting linear attention before it got going.</p>
+
+    <p>The alternative leaves the schedule alone and takes its first N updates, which we call a prefix. Backtested on the published full-training curves of the same 11 methods, a 500-update prefix already reached a Spearman of 0.72 against 0.40 for the compressed schedule, showing that compression itself did the damage; <strong>at 2,000 updates the prefix reaches 0.92</strong>, clearing the bar (Figure 2).</p>
+
+    <figure class="wide" id="fig-backtest">
+      <div class="fig-body" data-figure="backtest"></div>
+      <figcaption><strong>Figure 2.</strong> Ranking reliability by prefix length.</figcaption>
+    </figure>
+
+    <p>That settled the ruler: leave the learning-rate schedule untouched, run prefixes of the formal schedule, use update 512 only to drop clear failures, and rank and pick winners at update 2,000.</p>
+  </section>
+
+  <!-- 2 -->
+  <section id="s2">
+    <h2>2. Designing the Search Workflow</h2>
+
+    <p>With the ruler set, Opus turned those findings into a fixed set of search rules (Figure 3, Table 1); once the operator approved them, every threshold was locked, with a cap of three rounds and 600 GPU-hours.</p>
+
+    <figure class="wide" id="fig-workflow">
+      <div class="fig-body" data-figure="workflow"></div>
+      <figcaption><strong>Figure 3.</strong> The search workflow.</figcaption>
+    </figure>
+
+    <figure class="tbl wide" id="tab-rules">
+      <figcaption><strong>Table 1.</strong> Exploration findings and the rules that follow.</figcaption>
+      <div class="table-wrap">
+      <table class="plain">
+        <thead><tr><th>Finding of the exploration</th><th>Rule in the workflow</th></tr></thead>
+        <tbody>
+          <tr><td>The research trainer matches the formal trainer</td><td>Run the entire search in the research environment; port the winner straight to full training</td></tr>
+          <tr><td>A compressed schedule distorts rankings (Spearman 0.40)</td><td>Never compress the schedule; use prefixes of the formal schedule</td></tr>
+          <tr><td>A 500-update prefix reaches only 0.72 Spearman, below the 0.85 bar</td><td>Keep update 512 lenient: cancel only if more than 0.030 behind the dense baseline</td></tr>
+          <tr><td>A 2,000-update prefix reaches 0.92 Spearman</td><td>Rank candidates and decide wins at update 2,000</td></tr>
+          <tr><td>Same-seed reruns still differ by δ (excluding cross-seed variance)</td><td>Measure δ first; set the winning line at best baseline minus max(2δ, 0.001)</td></tr>
+          <tr><td>Slow-starting structures remain underrated at update 2,000</td><td>Log as a known blind spot; defer the idea of mixing in KDA linear layers</td></tr>
+        </tbody>
+      </table>
+      </div>
+    </figure>
+
+    <p class="list-lead">Two concrete conventions governed execution:</p>
+
+    <ul>
+      <li><strong>Anchor the winning line on Block AttnRes:</strong> the search first ran the Arena's dense baseline and Block AttnRes, the strongest published method available when the search began; rerunning the dense baseline with the same seed showed that two runs differ by about 0.0004 at update 2,000 (δ), so a candidate had to beat Block AttnRes by more than 0.001 to win.</li>
+      <li><strong>Change one thing per step, stack across rounds:</strong> each candidate could make only one change relative to its parent, state a refutable hypothesis beforehand, and stay within ±1% of the reference FLOPs; taking a previous round's candidate as the next parent let changes accumulate cleanly.</li>
+    </ul>
+  </section>
+
+  <!-- 3 -->
+  <section id="s3">
+    <h2>3. Three Search Rounds and Full Training</h2>
+
+    <h3 id="s3-1">3.1 Overview and Search Path</h3>
+
+    <p>Starting from Block AttnRes, the search trained 12 candidates across three rounds, and <strong>4 beat the winning line</strong> (Figure 4). Including the baselines and noise run, the search used about 550 GPU-hours, within the 600 cap. The update-512 floor cancelled nothing: the worst candidate there trailed the dense baseline by only 0.010.</p>
+
+    <figure class="wide" id="fig-lineage">
+      <div class="fig-body" data-figure="lineage"></div>
+      <figcaption><strong>Figure 4.</strong> The search path.</figcaption>
+    </figure>
+
+    <p>None of the five round-1 candidates actually cleared the winning line. Rather than riding a single knockout change, the blue path kept the two mild changes that came closest (Full AttnRes and Canon-A/C), extended and paired them in round 2, and merged them in round 3 to form AttnRes-Canon.</p>
+
+    <h3 id="s3-2">3.2 Round 1: Single Changes and an Early Mirage</h3>
+
+    <p>Block AttnRes partitions its 23 layers into 8 groups for cross-layer residual retrieval. Round 1 tested five single changes on top of it: three drawn from recent papers and two adjusting depth-width ratios or parameter allocation (Table 2).</p>
+
+    <figure class="tbl wide" id="tab-round1">
+      <figcaption><strong>Table 2.</strong> The five single changes of round 1 (dev BPB relative to Block AttnRes; lower is better).</figcaption>
+      <div class="table-wrap">
+      <table>
+        <thead><tr><th>Change</th><th>Hypothesis written at the time</th><th class="num nw">Update 512</th><th class="num nw">Update 2,000</th></tr></thead>
+        <tbody>
+          <tr><td>Full AttnRes: 23 groups instead of 8, so sublayers read each earlier layer separately <a class="cite" href="#ref-1">[1]</a></td><td>Sublayers can retrieve finer-grained earlier representations</td><td class="num">−0.0010</td><td class="num"><strong>−0.0008</strong></td></tr>
+          <tr><td>Canon-A/C: width-4 short convolutions on attention (A) and MLP (C) inputs <a class="cite" href="#ref-2">[2]</a></td><td>Inexpensive local mixing across neighboring tokens</td><td class="num">−0.0006</td><td class="num">−0.0006</td></tr>
+          <tr><td>Gate: head-wise sigmoid gate on the attention output <a class="cite" href="#ref-3">[3]</a></td><td>Input-dependent sparsity that removes attention sinks</td><td class="num"><strong>−0.0027</strong></td><td class="num">+0.0006</td></tr>
+          <tr><td>Deep-narrow: narrowest allowed FFN width, 27 layers instead of 23</td><td>At equal compute, extra depth pays off more than FFN width</td><td class="num">+0.0076</td><td class="num">+0.0027</td></tr>
+          <tr><td>Value embedding in every layer</td><td>Adds about 0.55B parameters at almost zero extra FLOPs</td><td class="num">+0.0022</td><td class="num">+0.0007</td></tr>
+        </tbody>
+      </table>
+      </div>
+    </figure>
+
+    <p>At update 2,000 not a single candidate cleared the −0.0010 winning line, though Full AttnRes (−0.0008) and Canon-A/C (−0.0006) came close. <strong>Gate's big early lead was a mirage</strong>: it led the whole field at −0.0027 at update 512, lost its edge around update 1,000, and finished 0.0006 behind at update 2,000 (Figure 5).</p>
+
+    <figure class="wide" id="fig-round1">
+      <div class="fig-body" data-figure="round1"></div>
+      <figcaption><strong>Figure 5.</strong> Round 1: dev BPB relative to Block AttnRes (lower is better).</figcaption>
+    </figure>
+
+    <h3 id="s3-3">3.3 Round 2: Combinations and Marginal Contributions</h3>
+
+    <p>The workflow required update 2,000 for win decisions, yet allowed picking the next round earlier. As soon as round 1 passed update 512, Opus chose round-2 combinations mainly from those early numbers and added two iso-compute MoE variants <a class="cite" href="#ref-4">[4]</a> (Table 3). <strong>Jumping on early signals handed half of the combination slots to Gate.</strong></p>
+
+    <figure class="tbl wide" id="tab-round2">
+      <figcaption><strong>Table 3.</strong> Round 2: dev BPB relative to Block AttnRes (lower is better).</figcaption>
+      <div class="table-wrap">
+      <table>
+        <thead><tr><th>Candidate</th><th class="num nw">Update 512</th><th class="num nw">Update 2,000</th><th>Win threshold</th></tr></thead>
+        <tbody>
+          <tr><td>Canon-A–D: adds Canon layers on q/k/v (B) and on the MLP hidden state (D)</td><td class="num">−0.0018</td><td class="num"><strong>−0.0021</strong></td><td>Passed</td></tr>
+          <tr><td>Full + Canon-A/C</td><td class="num">−0.0020</td><td class="num">−0.0018</td><td>Passed</td></tr>
+          <tr><td>Full + Gate</td><td class="num">−0.0025</td><td class="num">−0.0010</td><td>Passed (just barely)</td></tr>
+          <tr><td>Gate + Canon-A/C</td><td class="num"><strong>−0.0038</strong></td><td class="num">−0.0001</td><td>Not passed</td></tr>
+          <tr><td>MoE: 16 half-width experts, top-4 per token</td><td class="num">+0.0007</td><td class="num">+0.0016</td><td>Not passed</td></tr>
+          <tr><td>MoE: 8 experts, top-2 per token</td><td class="num">+0.0055</td><td class="num">+0.0063</td><td>Not passed</td></tr>
+        </tbody>
+      </table>
+      </div>
+    </figure>
+
+    <p>Three candidates crossed the winning line, while early rankings inverted even more starkly than in round 1: the top four at update 512 finished in the exact reverse order at update 2,000 (Figure 6). <strong>Once again, Gate drove the early inversion</strong>: adding Gate lowered 512-update BPB by 0.0014 to 0.0031 across parents, then gave all of it back by update 2,000.</p>
+
+    <figure class="wide" id="fig-round2">
+      <div class="fig-body" data-figure="round2"></div>
+      <figcaption><strong>Figure 6.</strong> Round 2: dev BPB relative to Block AttnRes (lower is better).</figcaption>
+    </figure>
+
+    <p>Before running round 2, Opus wrote nearly identical rationales for Full + Canon-A/C and Gate + Canon-A/C: the two changes touch different parts of the block, so their gains should stack. One won comfortably and the other stalled. Isolating each change's marginal effect across parents (Figure 7, Table 4) makes the difference plain.</p>
+
+    <figure class="wide" id="fig-marginal">
+      <div class="fig-body" data-figure="marginal"></div>
+      <figcaption><strong>Figure 7.</strong> Marginal effect of each change on different models.</figcaption>
+    </figure>
+
+    <figure class="tbl wide" id="tab-marginal">
+      <figcaption><strong>Table 4.</strong> Marginal effect of each change at update 2,000 (change in dev BPB).</figcaption>
+      <div class="table-wrap">
+      <table>
+        <thead><tr><th>Change added</th><th class="num">On Block AttnRes</th><th class="num">On Full AttnRes</th><th class="num">On Canon-A/C</th><th class="num">On Gate</th></tr></thead>
+        <tbody>
+          <tr><td>Full AttnRes</td><td class="num"><strong>−0.0008</strong></td><td class="num">—</td><td class="num"><strong>−0.0012</strong></td><td class="num"><strong>−0.0016</strong></td></tr>
+          <tr><td>Canon-A/C</td><td class="num">−0.0006</td><td class="num"><strong>−0.0010</strong></td><td class="num">—</td><td class="num">−0.0007</td></tr>
+          <tr><td>Gate</td><td class="num">+0.0006</td><td class="num">−0.0002</td><td class="num">+0.0005</td><td class="num">—</td></tr>
+        </tbody>
+      </table>
+      </div>
+    </figure>
+
+    <ul>
+      <li><strong>Full AttnRes and Canon each deliver consistent gains:</strong> both lowered 2,000-update dev BPB on every parent tested.</li>
+      <li><strong>Gate adds no net gain:</strong> its three marginal deltas straddle zero within same-seed run noise, and Full + Gate barely scraped past the line on Full's strength alone.</li>
+    </ul>
+
+    <p>“Different parts of the model, so gains stack” holds only when each part actually helps; zero plus a positive number is still just one gain. Those paired comparisons settled the case against Gate and kept it out of round 3.</p>
+
+    <h3 id="s3-4">3.4 Round 3: Shared-Parent Comparison and the Final Model</h3>
+
+    <p>Burned by early signals, Opus waited for longer runs before calling round 3. Only Full AttnRes and Canon remained viable, and two round-2 candidates happened to modify the same Canon-A/C parent in one way each: one switched to Full AttnRes, while the other added positions B and D to form Canon-A–D. Measured side by side on that shared parent, <strong>both sat about 0.002 below Canon-A/C by update 1,536</strong> (Figure 8). With enough budget left for just one run, Opus merged the two into AttnRes-Canon without waiting for Canon-A–D's final few hundred updates.</p>
+
+    <figure class="wide" id="fig-basis">
+      <div class="fig-body" data-figure="basis"></div>
+      <figcaption><strong>Figure 8.</strong> Dev BPB relative to the Canon-A/C parent.</figcaption>
+    </figure>
+
+    <p><strong>AttnRes-Canon reached 0.7965 at update 2,000, beating Block AttnRes by 0.0038 to finish first in the search</strong> (Table 5). Second behind Gate + Canon-A/C at update 512, it led every candidate from update 768 onward. Together the two modifications add about 1.27 million parameters over Block AttnRes, under 0.1% of the model.</p>
+
+    <figure class="tbl wide" id="tab-matrix">
+      <figcaption><strong>Table 5.</strong> Dev BPB at update 2,000 along the two axes (Δ: difference from Block AttnRes).</figcaption>
+      <div class="table-wrap">
+      <table class="matrix">
+        <thead><tr><th>Depth \ Canon</th><th class="num">No Canon</th><th class="num">Canon-A/C</th><th class="num">Canon-A–D</th></tr></thead>
+        <tbody>
+          <tr><td>Block AttnRes (8&nbsp;groups)</td><td class="num">0.8003<small>baseline</small><small>step time ×1.00</small></td><td class="num">0.7997<small>Δ −0.0006</small><small>step time ×1.10</small></td><td class="num">0.7982<small>Δ −0.0021</small><small>step time ×1.47</small></td></tr>
+          <tr><td>Full AttnRes (23&nbsp;groups)</td><td class="num">0.7995<small>Δ −0.0008</small><small>step time ×1.19</small></td><td class="num">0.7985<small>Δ −0.0018</small><small>step time ×1.30</small></td><td class="num"><strong>0.7965</strong><small>Δ −0.0038</small><small>step time ×1.66</small></td></tr>
+        </tbody>
+      </table>
+      </div>
+    </figure>
+
+    <p>The two components act along orthogonal axes (Figure 9). Block AttnRes lets a sublayer read only group sums, like consulting chapter summaries; Full AttnRes ungroups the layers so each sublayer retrieves from every earlier layer individually. Canon inserts width-4 causal depthwise convolutions that blend in the previous three tokens; zero-initialized weights keep step 0 identical to a model without Canon. <strong>One sharpens routing across depth while the other blends local context along the sequence</strong>, leading Opus to conjecture that the two reinforce each other.</p>
+
+    <figure class="wide" id="fig-mechanism">
+      <div class="fig-body" data-figure="mechanism"></div>
+      <figcaption><strong>Figure 9.</strong> Where Full AttnRes and the Canon layers act.</figcaption>
+    </figure>
+
+    <p>At face value Table 5 leans that way: moving from no Canon to Canon-A/C to Canon-A–D widens the gain of Full over Block from −0.0008 to −0.0012 to −0.0017. Yet adjacent steps differ by only 0.0004 to 0.0005, roughly the size of same-seed run noise (about 0.0004), and every entry comes from a single seed. <strong>The numbers are compatible with synergy, though too close to prove super-additivity.</strong></p>
+
+    <h3 id="s3-5">3.5 Results of Full Training</h3>
+
+    <p>Short-run search stops while the learning rate is still flat; full training tests whether that edge survives a long decay. Ported into a formal plugin and verified gradient by gradient against the research code, AttnRes-Canon trained from scratch for 49.152B tokens, which took about 1,430 GPU-hours. Formal evaluation tracks validation BPB and CORE-22 (mean normalized accuracy above chance across 22 tasks, multiplied by 100 below; higher is better). <strong>AttnRes-Canon ranks first among all 38 published results on both CORE and validation BPB</strong>, ahead of mHC, a cross-layer connection method published after the search began, in second place on both (Table 6, Figure 10a).</p>
+
+    <figure class="tbl" id="tab-formal">
+      <figcaption><strong>Table 6.</strong> Results after full training.</figcaption>
+      <div class="table-wrap">
+      <table>
+        <thead><tr><th>Method</th><th class="num">CORE ×100</th><th class="num">CORE ×100 (without BoolQ)</th><th class="num">Validation BPB</th></tr></thead>
+        <tbody>
+          <tr><td>Dense baseline</td><td class="num">33.10</td><td class="num">34.46</td><td class="num">0.6672</td></tr>
+          <tr><td>Block AttnRes</td><td class="num">34.00</td><td class="num">35.96</td><td class="num">0.6630</td></tr>
+          <tr><td>mHC</td><td class="num">35.33</td><td class="num">36.23</td><td class="num">0.6617</td></tr>
+          <tr><td>AttnRes-Canon</td><td class="num"><strong>35.99</strong></td><td class="num"><strong>36.70</strong></td><td class="num"><strong>0.6605</strong></td></tr>
+        </tbody>
+      </table>
+      </div>
+    </figure>
+
+    <figure class="wide" id="fig-context">
+      <div class="fig-body" data-figure="context"></div>
+      <figcaption><strong>Figure 10.</strong> CORE and validation BPB after full training.</figcaption>
+    </figure>
+
+    <p><strong>The 2.0-point CORE margin deserves a discount.</strong> Against Block AttnRes, AttnRes-Canon is better on 16 of the 22 tasks, level on 2 and worse on 4; yet of its 2.0 points over Block AttnRes, the yes/no QA task BoolQ alone accounts for 1.3 (Figure 10b), and without BoolQ the lead shrinks to 0.7.</p>
+
+    <p><strong>The validation BPB lead holds throughout training, though decay trims more than half of it.</strong> Against Block AttnRes, the gap stood at −0.0037 at update 2,000, widened to nearly 0.006 during the constant-LR plateau, and narrowed during linear decay to finish at −0.0024 (Figure 11a, Table 7).</p>
+
+    <figure class="wide" id="fig-formal">
+      <div class="fig-body" data-figure="formal"></div>
+      <figcaption><strong>Figure 11.</strong> Differences from Block AttnRes over full training.</figcaption>
+    </figure>
+
+    <figure class="tbl wide" id="tab-gap">
+      <figcaption><strong>Table 7.</strong> Validation BPB gaps at three points of full training.</figcaption>
+      <div class="table-wrap">
+      <table>
+        <thead><tr><th>Comparison</th><th class="num nw">Update 2,000</th><th class="num">Constant-LR phase (mean of 10K–16K)</th><th class="num">End</th></tr></thead>
+        <tbody>
+          <tr><td>AttnRes-Canon vs Block AttnRes</td><td class="num">−0.0037</td><td class="num">−0.0058</td><td class="num">−0.0024</td></tr>
+          <tr><td>mHC vs Block AttnRes</td><td class="num">−0.0003</td><td class="num">−0.0043</td><td class="num">−0.0013</td></tr>
+          <tr><td>AttnRes-Canon vs mHC</td><td class="num">−0.0034</td><td class="num">−0.0015</td><td class="num">−0.0011</td></tr>
+          <tr><td>Dense baseline + Gate vs dense baseline</td><td class="num">−0.0012</td><td class="num">−0.0004</td><td class="num">+0.0002</td></tr>
+        </tbody>
+      </table>
+      </div>
+    </figure>
+
+    <p>Most of that narrowing comes from Block AttnRes surging during its own decay: over the same stretch mHC lost more than half of its lead over Block AttnRes too, whereas AttnRes-Canon's margin over mHC barely budged (−0.0015 to −0.0011). The bottom row of Table 7 shows a starker cautionary tale from another contributor's full run: adding the round-1 Gate to the dense baseline led by 0.0012 at update 2,000, enough to clear our 0.001 search bar, yet ended 0.0002 behind after decay. <strong>How much of a constant-LR lead survives can only be told after decay finishes.</strong></p>
+
+    <p>The six CORE scores come from checkpoints along a single training trajectory (Figure 11b). AttnRes-Canon led Block AttnRes at all six, whereas against mHC it trailed in three of the first five evaluations before pulling ahead to lead by 0.7 at the end. Checkpoints along one run cannot tell whether that order would hold on another seed.</p>
+
+    <p><strong>Wall-clock speed is the other price paid.</strong> Because the protocol constrains FLOPs per token rather than throughput, AttnRes-Canon took 1.66 times as long per step as Block AttnRes in the research trainer (Table 5), largely because its four Canon convolutions lack fused kernels; whether custom kernels recover that gap remains to be tested.</p>
+  </section>
+
+  <!-- 4 -->
+  <section id="s4">
+    <h2>4. Summary and Outlook</h2>
+
+    <h3 id="s4-1">4.1 Takeaways from Arena v1</h3>
+
+    <p><strong>Short-horizon architecture search turns on filtering out early mirages:</strong> prefixes have to run long enough to expose fleeting leads, and individual changes need verification on a shared parent before they are combined.</p>
+
+    <p>Across all three stages compute came to 2,135 GPU-hours (Table 8): exploration and search used about 700 GPU-hours, staying within one third of the total, excluding about 50 GPU-hours more spent on gradient checks during porting.</p>
+
+    <figure class="tbl" id="tab-compute">
+      <figcaption><strong>Table 8.</strong> Compute across three stages (GPU-hours, excluding porting checks).</figcaption>
+      <div class="table-wrap">
+      <table class="compute">
+        <thead><tr><th>Phase</th><th>What it covers</th><th>Budget</th><th class="num">Used</th><th class="num">Share</th></tr></thead>
+        <tbody>
+          <tr><td>Early exploration</td><td>Checking the research environment; testing whether short runs can rank</td><td>about 170</td><td class="num">152</td><td class="num">7%</td></tr>
+          <tr><td>Workflow design and search</td><td>Two baselines, the noise measurement and 12 candidates over three rounds</td><td>cap of 600</td><td class="num">550</td><td class="num">26%</td></tr>
+          <tr><td>Final training</td><td>A full run of AttnRes-Canon under the protocol</td><td>fixed by the protocol: 49.152B tokens</td><td class="num">1,433</td><td class="num">67%</td></tr>
+          <tr class="total"><td>Total</td><td></td><td></td><td class="num">2,135</td><td class="num">100%</td></tr>
+        </tbody>
+      </table>
+      </div>
+    </figure>
+
+    <p class="list-lead">What Opus got right:</p>
+
+    <ol>
+      <li><strong>Calibrated the ruler before searching:</strong> once the compressed schedule proved biased across families, it switched to 2,000-update formal prefixes.</li>
+      <li><strong>Held to single-change controls:</strong> changing one piece relative to the parent with a refutable hypothesis written upfront let round 2 isolate each part's marginal effect.</li>
+      <li><strong>Waited for longer signals before merging:</strong> instead of trusting update 512 again, it compared round-2 branches on their shared Canon-A/C parent at update 1,536.</li>
+      <li><strong>Used files as durable memory:</strong> across four days its context compacted 7 times, and written candidate notes and selection logs let it resume cleanly every time.</li>
+    </ol>
+
+    <p class="list-lead">Where it fell short:</p>
+
+    <ol>
+      <li><strong>Left its plan unwired to triggers:</strong> intending to call round 3 at update 1,536, it set wake-up reminders only at updates 512 and 2,000, stalling the session until the operator nudged it.</li>
+      <li><strong>Carried uncalibrated priors:</strong> iso-compute MoE, its highest-rated bet going in, lost to Block AttnRes in both configurations.</li>
+      <li><strong>Misread noise at first:</strong> it initially treated same-seed GPU variance as cross-seed variance, later fixed the note on its own, yet never added a second-seed check.</li>
+      <li><strong>Ignored step-time overhead:</strong> with no throughput ceiling in the selection rules, it accepted a noticeably slower convolution stack.</li>
+    </ol>
+
+    <p><strong>The evidence has clear boundaries too.</strong> Every result rests on a single seed, so multi-seed runs and full-scale ablations are still needed to confirm both the net gain and any synergy between the two components. During the search the operator sent only the launch prompt, a few status checks, and two nudges to resume, picking no candidate and offering no directional hint; candidate selection used dev BPB alone, though without process-level isolation Opus had read earlier published runs in the repository.</p>
+
+    <h3 id="s4-2">4.2 A Preview of Arena v2</h3>
+
+    <p>In v1, people still approved stage gates, watched budgets, decided when to stop, and ported the winning plugin. Arena v2 hands the entire loop to the agent and the Gym through four upgrades:</p>
+
+    <ul>
+      <li><strong>Sealed container execution:</strong> research runs inside an isolated container through Gym interfaces, keeping the validation split and CORE-22 invisible to the agent.</li>
+      <li><strong>Hard FLOPs ledger:</strong> each session receives a fixed 1.96×10²⁰ FLOPs budget (roughly twenty 2,000-update baseline runs in v1), charged across training, evaluation, and failed attempts alike, while logging model tokens and API spend.</li>
+      <li><strong>Open-ended experimental design:</strong> the model chooses its own starting architecture, controls, candidate count, run horizons, and pruning schedule rather than following preset steps or rounds.</li>
+      <li><strong>Single-file submission:</strong> submitting one model file triggers formal full training directly in the Gym, removing stage approvals and manual porting.</li>
+    </ul>
+
+    <p>Under this setup, Opus, GLM, and DeepSeek will each run an independent study on the same 1.96×10²⁰ FLOPs budget and have their discovered architectures trained and compared under one formal protocol. Addressing two gaps from v1, the draft workflow also adds a second-seed check for finalists and a cap on step time.</p>
+
+    <p>This study closed the research loop within a single session. Testing cross-session self-improvement (RSI) means folding lessons such as automatic decision triggers and shared-parent marginal checks into the next workflow, then <strong>evaluating it head to head against the frozen old workflow under the exact same budget</strong> to see whether past mistakes translate into stronger search.</p>
+
+    <p class="links">Formal run record, disclosure card, and method code: <a href="https://github.com/Interactive-Active-AI/NextTransformer/blob/main/results/runs/attnres_full_canon_abcd.json">run record</a> · <a href="https://github.com/Interactive-Active-AI/NextTransformer/blob/main/results/arena/attnres-canon.json">disclosure card</a> · <a href="https://github.com/Interactive-Active-AI/NextTransformer/tree/main/nexttransformer/methods/attnres_full_canon_abcd">method plugin</a></p>
+  </section>
+
+  <section id="refs" class="references">
+    <h2>References</h2>
+    <ol>
+      <li id="ref-1"><strong>Attention Residuals.</strong> Kimi Team. <em>arXiv preprint</em>, 2026. <a href="https://arxiv.org/abs/2603.15031">arXiv:2603.15031</a></li>
+      <li id="ref-2"><strong>Physics of Language Models: Part 4.1, Architecture Design and the Magic of Canon Layers.</strong> Zeyuan Allen-Zhu. <em>arXiv preprint</em>, 2025. <a href="https://arxiv.org/abs/2512.17351">arXiv:2512.17351</a></li>
+      <li id="ref-3"><strong>Gated Attention for Large Language Models: Non-linearity, Sparsity, and Attention-Sink-Free.</strong> Zihan Qiu et al. <em>arXiv preprint</em>, 2025. <a href="https://arxiv.org/abs/2505.06708">arXiv:2505.06708</a></li>
+      <li id="ref-4"><strong>Outrageously Large Neural Networks: The Sparsely-Gated Mixture-of-Experts Layer.</strong> Noam Shazeer et al. <em>ICLR</em>, 2017. <a href="https://arxiv.org/abs/1701.06538">arXiv:1701.06538</a></li>
+    </ol>
+  </section>
+</article>
+</main>
+</div>
+
+<footer class="site-footer">
+  <p>NextTransformer Arena v1 · revised draft · <a href="../" hreflang="zh-CN" lang="zh-CN">中文版</a></p>
+</footer>
+
+<script src="../data.js"></script>
+<script src="../site.js"></script>
+<script src="../figures.js"></script>
+</body>
+</html>

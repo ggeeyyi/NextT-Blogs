@@ -1,0 +1,300 @@
+/* Layout follows blog/STYLE.md. Light values are the defaults; dark values are their own validated steps. */
+:root {
+  color-scheme: light;
+  --page: #f6f8fb;
+  --paper: #ffffff;
+  --surface: #fcfcfb;
+  --ink: #111827;
+  --text-primary: #0b0b0b;
+  --text-body: #22252a;
+  --text-secondary: #52514e;
+  --text-muted: #898781;
+  --grid: #e1e0d9;
+  --axis: #c3c2b7;
+  --border: #e3e6ec;
+  --border-strong: #cdd5e1;
+  --wash: #f0efec;
+  --accent: #2a78d6;
+  --accent-dark: #1c5cab;
+  --accent-soft: #e6f0fc;
+  --accent-wash: #cde2fb;
+  --link: #1c5cab;
+  --quote-bg: #f1f6fd;
+  --up: #0b7a52;
+  --down: #c0392b;
+  --shadow: 0 18px 45px rgba(17, 24, 39, 0.07);
+  --fig-shadow: 0 10px 30px rgba(17, 24, 39, 0.075);
+  --tip-shadow: 0 8px 24px rgba(17, 24, 39, 0.16);
+  --series-1: #2a78d6;
+  --series-2: #eb6834;
+  --series-3: #1baf7a;
+  --series-4: #eda100;
+  --series-5: #e87ba4;
+  --series-6: #008300;
+  --series-7: #6250d6;
+  --series-8: #e34948;
+  --series-other: #b5b3ab;
+  --neutral-mark: #8a8882;
+  --pos: #2a78d6;
+  --neg: #e34948;
+  --measure: 840px;   /* the one column shared by text, figures and tables */
+  --font: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Noto Sans CJK SC",
+    "Microsoft YaHei", Roboto, Helvetica, Arial, sans-serif;
+  --mono: ui-monospace, "SFMono-Regular", Menlo, Monaco, Consolas, monospace;
+  --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+/* The English page lists Latin fonts first, so punctuation such as curly quotes is not drawn full-width. */
+html[lang="en"] {
+  --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans", Helvetica, Arial,
+    "PingFang SC", "Hiragino Sans GB", "Noto Sans CJK SC", "Microsoft YaHei", sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:where(:not([data-theme="light"])) {
+    color-scheme: dark;
+    --page: #0d0d0d; --paper: #151514; --surface: #1a1a19; --ink: #f0efec; --text-primary: #f0efec;
+    --text-body: #dddcd6; --text-secondary: #c3c2b7; --text-muted: #898781; --grid: #2c2c2a; --axis: #383835;
+    --border: #2a2a28; --border-strong: #3a3a37; --wash: #262624; --accent: #3987e5; --accent-dark: #86b6ef;
+    --accent-soft: #1a2638; --accent-wash: #1c3558; --link: #86b6ef; --quote-bg: #18202b;
+    --up: #4fc79a; --down: #f08a8a;
+    --shadow: none; --fig-shadow: none; --tip-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+    --series-1: #3987e5; --series-2: #d95926; --series-3: #199e70; --series-4: #c98500;
+    --series-5: #d55181; --series-6: #008300; --series-7: #9085e9; --series-8: #e66767; --series-other: #5f5e59;
+    --neutral-mark: #8f8d86; --pos: #3987e5; --neg: #e66767;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --page: #0d0d0d; --paper: #151514; --surface: #1a1a19; --ink: #f0efec; --text-primary: #f0efec;
+  --text-body: #dddcd6; --text-secondary: #c3c2b7; --text-muted: #898781; --grid: #2c2c2a; --axis: #383835;
+  --border: #2a2a28; --border-strong: #3a3a37; --wash: #262624; --accent: #3987e5; --accent-dark: #86b6ef;
+  --accent-soft: #1a2638; --accent-wash: #1c3558; --link: #86b6ef; --quote-bg: #18202b;
+  --up: #4fc79a; --down: #f08a8a;
+  --shadow: none; --fig-shadow: none; --tip-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  --series-1: #3987e5; --series-2: #d95926; --series-3: #199e70; --series-4: #c98500;
+  --series-5: #d55181; --series-6: #008300; --series-7: #9085e9; --series-8: #e66767; --series-other: #5f5e59;
+  --neutral-mark: #8f8d86; --pos: #3987e5; --neg: #e66767;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0;
+  background:
+    radial-gradient(circle at 16% 0%, color-mix(in srgb, var(--accent) 10%, transparent), transparent 28rem),
+    var(--page);
+  color: var(--text-body);
+  font: 17px/1.85 var(--font);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+html[lang="en"] body { line-height: 1.72; }
+a { color: var(--link); text-decoration: none; border-bottom: 1px solid color-mix(in srgb, var(--accent) 35%, transparent); }
+a:hover { background: var(--accent-soft); border-bottom-color: currentColor; }
+strong { font-weight: 700; color: var(--ink); }
+code { font: 0.86em var(--mono); background: var(--accent-soft); color: var(--ink); padding: 0.1em 0.34em; border-radius: 5px; }
+
+/* Reading progress: a bar across the top that fills as the article scrolls. */
+.progress { position: fixed; top: 0; left: 0; right: 0; height: 3px; z-index: 30; background: color-mix(in srgb, var(--ink) 8%, transparent); }
+.progress span { display: block; height: 100%; background: var(--accent); transform: scaleX(0); transform-origin: left center; }
+
+/* The language and theme buttons sit at the top of the page and scroll away with it, so they never cover the text. */
+.top-actions { position: absolute; top: 14px; right: 16px; z-index: 20; display: flex; gap: 8px; }
+.pill {
+  font: 13px/1.5 var(--font); color: var(--text-secondary); background: var(--paper);
+  border: 1px solid var(--border); border-radius: 999px; padding: 4px 12px; cursor: pointer; box-shadow: var(--fig-shadow);
+}
+a.pill { border-bottom: 1px solid var(--border); }
+a.pill:hover, button.pill:hover { background: var(--accent-soft); color: var(--text-primary); }
+.pill:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+/* Page frame: the article card, centered, with a section rail in the left margin on wide screens. */
+.page { display: grid; grid-template-columns: minmax(0, 1000px); justify-content: center; padding: 0 16px; }
+main {
+  margin: 46px 0 56px; padding: 54px 80px 72px; min-width: 0;
+  background: var(--paper); border: 1px solid var(--border); border-radius: 18px; box-shadow: var(--shadow);
+}
+.rail { display: none; }
+@media (min-width: 1420px) {
+  .rail {
+    display: block; position: fixed; top: 132px; left: calc(50% - 500px - 26px - 164px); width: 164px;
+    font-size: 13px; line-height: 1.45; opacity: 0; visibility: hidden; transition: opacity 0.3s, visibility 0.3s;
+  }
+  .rail.is-on { opacity: 1; visibility: visible; }
+}
+.rail-title { color: var(--text-muted); font-size: 12px; letter-spacing: 0.08em; margin: 0 0 8px 12px; }
+.rail ol { list-style: none; margin: 0; padding: 0; }
+.rail a {
+  display: flex; gap: 8px; padding: 6px 10px 6px 12px; color: var(--text-muted);
+  border-bottom: 0; border-left: 2px solid var(--border); transition: color 0.2s, border-color 0.2s;
+}
+.rail a:hover { background: none; color: var(--text-primary); }
+.rail a span { flex: none; width: 1.1em; font-variant-numeric: tabular-nums; }
+.rail a.is-current { color: var(--ink); border-left-color: var(--accent); font-weight: 650; }
+.rail li.sub a { padding: 3px 10px 3px 34px; font-size: 12px; }
+
+/* Text, figures and tables share one column width. */
+article > :not(section), article > section > * { max-width: var(--measure); margin-inline: auto; }
+
+h1, h2, h3 { color: var(--ink); line-height: 1.3; letter-spacing: -0.01em; }
+h1 { font-size: 2.3rem; margin-block: 0 0.8rem; font-weight: 760; }
+h2 { font-size: 1.6rem; margin-block: 3.6rem 0.5rem; padding-top: 0.45rem; font-weight: 780; scroll-margin-top: 24px; }
+h2::before { content: ""; display: block; width: 38px; height: 3px; margin: 0 0 0.75rem; border-radius: 999px; background: var(--accent); }
+h3 { font-size: 1.24rem; margin-block: 2.7rem 0.5rem; font-weight: 740; scroll-margin-top: 24px; }
+.list-lead { margin-block: 1.3rem 0.2rem; color: var(--ink); font-weight: 700; }
+section { scroll-margin-top: 24px; }
+p { margin-block: 1rem; }
+ul, ol { padding-left: 1.45rem; margin-block: 0.72rem 1.25rem; }
+li { margin-block: 0.32rem; }
+
+.post-head::before { content: ""; display: block; width: 72px; height: 5px; border-radius: 999px; background: var(--accent); margin: 0 0 1.1rem; }
+.eyebrow { margin-block: 0 0.5rem; color: var(--accent-dark); font-size: 0.82rem; font-weight: 650; letter-spacing: 0.08em; }
+.post-meta { display: flex; flex-wrap: wrap; gap: 4px 20px; margin-block: 0 1.6rem; color: var(--text-muted); font-size: 0.95rem; }
+.cite { white-space: nowrap; }
+
+.abstract {
+  margin-block: 0.4rem 1.5rem; padding: 1rem 1.25rem 0.5rem;
+  border: 1px solid var(--border-strong); border-left: 5px solid var(--accent); border-radius: 12px;
+  background: linear-gradient(90deg, var(--accent-soft), var(--paper));
+}
+.abstract-label { font-weight: 800; color: var(--ink); letter-spacing: 0.04em; }
+.abstract p { margin-block: 0.6rem; }
+
+
+.toc { margin-block: 1.6rem 1.8rem; padding: 1rem 1.2rem 0.9rem; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; }
+.toc-title { color: var(--ink); font-weight: 800; margin-bottom: 0.35rem; }
+/* A flat list: numbered sections, with their subsections as indented entries. */
+.toc ol { margin-block: 0; padding-left: 0; list-style: none; counter-reset: toc; }
+.toc li { position: relative; margin-block: 0.42rem; padding-left: 1.7em; line-height: 1.5; counter-increment: toc; }
+.toc li::before { content: counter(toc) "."; position: absolute; left: 0; color: var(--text-secondary); }
+/* A subsection carries its own number (3.1, 3.2) in its text and lines up under its section's title. */
+.toc li.sub { margin-block: 0.18rem; padding-left: 1.83em; font-size: 0.93rem; counter-increment: none; }
+.toc li.sub::before { content: none; }
+
+
+/* Tables: a numbered caption above, the whole table always visible. Plain cells; bold marks the best value of a column. */
+.table-wrap { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: 0.9rem; line-height: 1.6; }
+th, td { border: 1px solid var(--border); padding: 0.45rem 0.75rem; text-align: left; vertical-align: top; }
+th { background: var(--accent-soft); color: var(--ink); font-weight: 650; }
+td strong { color: var(--ink); font-weight: 700; }
+td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+td.num, th.nw { white-space: nowrap; }
+/* The compute table ends in a total row. */
+tr.total td { border-top: 2px solid var(--border-strong); }
+/* A table of two columns of sentences. */
+table.plain td { width: 50%; }
+/* The depth x Canon table: each cell gives dev BPB, then the difference and the step time in small type. */
+.matrix td small { display: block; color: var(--text-muted); font-size: 0.86em; line-height: 1.5; }
+.matrix th.num { white-space: nowrap; }
+tbody tr { transition: background-color 0.15s; }
+tbody tr:hover td { background: color-mix(in srgb, var(--accent-soft) 55%, transparent); }
+
+figure { margin-block: 2rem 2.3rem; }
+figure.tbl { margin-block: 1.8rem 2rem; }
+figcaption { margin: 0.75rem auto 0; color: var(--text-muted); font-size: 0.9rem; line-height: 1.6; text-align: center; }
+figcaption strong { color: var(--ink); }
+figure.tbl figcaption { margin: 0 auto 0.7rem; }
+
+/* Figures */
+.fig-body {
+  position: relative; background: var(--surface); border: 1px solid var(--border); border-radius: 14px;
+  padding: 18px 16px 12px; box-shadow: var(--fig-shadow);
+}
+.fig-body svg { display: block; width: 100%; height: auto; font-family: var(--font); overflow: visible; }
+.fig-body svg text { font-variant-numeric: tabular-nums; }
+.fig-title { margin: 0 2px 6px 2px; color: var(--ink); font-size: 13.5px; font-weight: 650; line-height: 1.45; }
+.fig-sub { margin: -4px 2px 6px 2px; color: var(--text-muted); font-size: 12px; line-height: 1.45; }
+/* Panels stack by default; figures.js sets the columns when the container is wide enough. */
+.panels { display: grid; grid-template-columns: minmax(0, 1fr); gap: 18px 22px; }
+.panel { min-width: 0; }
+.fig-foot { display: flex; align-items: flex-end; gap: 12px; }
+.fig-foot .legend { flex: 1 1 auto; }
+.fig-replay {
+  flex: none; margin: 6px 0 2px auto; width: 26px; height: 26px; padding: 0; display: grid; place-items: center;
+  color: var(--text-muted); background: var(--surface); border: 1px solid var(--border); border-radius: 999px; cursor: pointer;
+  opacity: 0.8; transition: opacity 0.2s, color 0.2s, background-color 0.2s;
+}
+.fig-replay:hover { opacity: 1; color: var(--text-primary); background: var(--accent-soft); }
+.fig-replay:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; opacity: 1; }
+.fig-replay svg { width: 14px; height: 14px; }
+
+.legend { display: flex; flex-wrap: wrap; gap: 4px 16px; margin: 8px 2px 2px; color: var(--text-secondary); }
+.legend-item { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; line-height: 1.5; font-variant-numeric: tabular-nums; white-space: pre; }
+.legend-item[data-key] { cursor: default; }
+.legend-key { flex: none; width: 18px; height: 0; border-top: 2.5px solid; border-radius: 2px; }
+.legend-key.rect { width: 12px; height: 10px; border: 0; border-radius: 3px; }
+.legend-key.dot { width: 9px; height: 9px; border: 0; border-radius: 50%; }
+.legend-key.band { width: 18px; height: 8px; border: 0; border-radius: 2px; }
+
+/* Hover emphasis inside a figure: the series under the pointer stays, the rest recede. Nothing is revealed that is not
+   already drawn. */
+.fig-body svg .series, .fig-body svg .node, .fig-body svg .edge { transition: opacity 0.18s; }
+.fig-body svg.has-focus .series:not(.is-focus), .fig-body svg.has-focus .node:not(.is-focus) { opacity: 0.22; }
+.fig-body svg.has-focus .edge:not(.is-focus) { opacity: 0.12; }
+.fig-body svg .hit { cursor: default; }
+
+/* The readout that follows the pointer over a chart; it repeats values the figure or its table already shows. */
+.tip {
+  position: fixed; z-index: 40; pointer-events: none; max-width: 300px; padding: 8px 10px; border-radius: 9px;
+  background: var(--paper); border: 1px solid var(--border-strong); box-shadow: var(--tip-shadow);
+  color: var(--text-secondary); font-size: 12px; line-height: 1.5; opacity: 0; transition: opacity 0.12s;
+}
+.tip.is-on { opacity: 1; }
+.tip-title { color: var(--text-muted); margin-bottom: 2px; }
+.tip-row { display: flex; align-items: center; gap: 7px; white-space: nowrap; }
+.tip-row b { margin-left: auto; padding-left: 14px; color: var(--ink); font-weight: 650; font-variant-numeric: tabular-nums; }
+.tip-key { flex: none; width: 12px; height: 0; border-top: 2.5px solid; border-radius: 2px; }
+
+/* The mechanism figure: two panels side by side; figures.js stacks them when the container is narrow. */
+.mech { display: flex; align-items: stretch; }
+.mech-a { flex: 1 1 0; min-width: 0; }
+.mech-b { flex: 1 1 0; min-width: 0; border-left: 1px solid var(--grid); padding-left: 12px; margin-left: 12px; }
+/* Dashes that travel along a path while its figure is in view (the depth reads, the workflow's way back). */
+.flowing svg .flow { stroke-dasharray: 3 9; animation: flow 1.1s linear infinite; }
+.flowing.is-paused svg .flow { animation-play-state: paused; }
+@keyframes flow { to { stroke-dashoffset: -12; } }
+
+.links { font-size: 0.95rem; color: var(--text-secondary); }
+.references { margin-top: 3.3rem; padding-top: 0.3rem; }
+.references h2 { border-top: 1px solid var(--border); padding-top: 1.6rem; }
+.references h2::before { display: none; }
+.references ol { padding-left: 1.35rem; }
+.references li { margin-block: 0.7rem; color: var(--text-secondary); font-size: 0.95rem; line-height: 1.65; }
+.site-footer { text-align: center; color: var(--text-muted); font-size: 13px; padding: 0 24px 36px; }
+
+/* Entrance motion. The hidden start state exists only while site.js has marked the page as animated, so the article
+   reads in full without scripts, in print and with reduced motion. */
+.js-motion .reveal { opacity: 0; transform: translateY(14px); transition: opacity 0.6s var(--ease), transform 0.6s var(--ease); }
+.js-motion .reveal.is-in { opacity: 1; transform: none; }
+
+/* Between phone and desktop the card keeps the text column by giving up side padding. */
+@media (max-width: 1000px) {
+  main { padding-inline: 40px; }
+}
+@media (max-width: 760px) {
+  body { font-size: 16px; }
+  .page { padding: 0; }
+  main { margin: 0; border-radius: 0; padding: 44px 20px 56px; border-left: 0; border-right: 0; }
+  h1 { font-size: 1.85rem; }
+  h2 { font-size: 1.36rem; }
+  table { font-size: 0.78rem; }
+  th, td { padding: 0.4rem 0.4rem; }
+  th.nw { white-space: normal; }
+}
+@media (max-width: 640px) {
+  .fig-body { padding: 14px 10px 10px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  .flowing svg .flow { animation: none; stroke-dasharray: none; }
+  .fig-replay { display: none; }
+}
+@media print {
+  .progress, .top-actions, .rail, .fig-replay, .tip { display: none; }
+  .flowing svg .flow { animation: none; stroke-dasharray: none; }
+  .page { display: block; padding: 0; }
+  main { box-shadow: none; border: 0; margin: 0; }
+}
+@media (forced-colors: active) {
+  .legend-key { forced-color-adjust: none; }
+}
