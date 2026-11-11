@@ -24,28 +24,32 @@
   const T = {
     zh: {
       replay: '重播动画',
+      shortAria: '两种截短训练的办法',
+      shortTitles: ['完整训练：46,875 步', '压缩调度：512 步', '前缀：前 2,000 步'],
+      shortNotes: ['学习率先保持不变，之后线性下降', '整条调度原样挤进 512 步，很早就开始下降', '学习率一直不变，和完整训练的开头一样'],
+      shortScore: (v) => `与最终名次的相关 ${v}`, shortPrefix: '前缀取这一段', shortUnit: '步', shortLr: '学习率',
       lineageAria: '搜索路径图',
       lineageHead: [['Baseline', 'Arena 已有方法'], ['第一轮', '5 个单点改动和 1 个对照'], ['第二轮候选池', '10 个候选，跑了 6 个'], ['第三轮', '只跑 1 个']],
       anchorSub: (v) => `2,000 步 dev BPB ${v}`, finalSub: (d) => `Δ ${d} ✓ 最终模型`,
       beatsSub: (d) => `Δ ${d} ✓`, noSub: (d) => `Δ ${d}`,
       lineagePath: '通向最终模型的路径', lineageWin: '✓ 越过胜出线', lineageDelta: 'Δ：2,000 步时相对 Block AttnRes 的 dev BPB 差值',
       flowAria: '搜索的 workflow',
-      flowSteps: [['Baseline 与噪声', ['两个 baseline 各训练', '2,000 步；再把 dense', 'baseline 重复一次，', '测得噪声 δ ≈ 0.0004']], ['提出候选', ['每轮最多 6 个', '相对父模型只改一处', '写下假设', 'FLOPs ±1%']],
-        ['512 步筛选', ['比 dense baseline', '差 0.030 以上', '则取消']], ['2,000 步排名', ['比最好的 baseline', '低 0.001 以上', '算胜出']], ['完整训练', ['最好的候选移植后', '训练 46,875 步', '按 CORE 排名']]],
+      flowSteps: [['Baseline 与噪声', ['两个 baseline 各训练', '2,000 步；再把 Dense', 'Baseline 重复一次，', '测得噪声 δ ≈ 0.0004']], ['提出候选', ['每轮最多 6 个', '相对父模型只改一处', '写下假设', 'FLOPs ±1%']],
+        ['512 步筛选', ['比 Dense Baseline', '差 0.030 以上', '则取消']], ['2,000 步排名', ['比最好的 baseline', '低 0.001 以上', '算胜出']], ['完整训练', ['最好的候选移植后', '训练 46,875 步', '按 CORE 排名']]],
       flowLoop: '搜索循环 · 最多 3 轮',
       flowLoopNote: ['下一轮：组合或扩展上一轮的改动', '合计不超过 600 GPU 小时 · 连续两轮无胜出者则停止'],
-      flowScale: '训练长度（按比例）', flowPhases: ['恒定学习率', '学习率衰减'], flowEnd: '46,875 步',
+      flowScale: '训练长度（按比例）', flowPhases: ['学习率不变', '学习率逐渐下降'], flowEnd: '46,875 步',
       flowTicks: ['512 步 · 筛选 · 约 1%', '2,000 步 · 排名 · 约 4%'],
-      flowNote: ['放大：前 2,000 步', '搜索只看得到最前面的这一小段，', '这时学习率还没有开始衰减。'],
+      flowNote: ['放大：前 2,000 步', '搜索只看得到最前面的这一小段，', '这时学习率还没有开始下降。'],
       slopeAria: '11 个方法的短程排名与最终排名',
-      slopeHead: [['短程排名', '压缩到 512 步的 schedule'], ['最终排名', '完整训练后']],
+      slopeHead: [['短程排名', '压缩调度，512 步'], ['最终排名', '完整训练后']],
       slopeLegend: ['Loop 类：4 个全部下降', 'Linear attention 类：4 个全部上升', 'Baseline 与 residual'],
       slopeTip: (a, b) => `第 ${a} → 第 ${b}`, slopeShort: '512 步 dev BPB',
-      backAria: '前缀长度与排名相关性', backY: '与最终排名的 Spearman 相关', backX: '正式 schedule 的前 N 步（对数刻度）',
-      bar: '事先定的标准 0.85', prefix: (s) => `前 ${s} 步`, compressed: '压缩 schedule，512 步', full: '完整',
+      backAria: '前缀长度与排名相关性', backY: '与最终排名的 Spearman 相关', backX: '正式调度的前 N 步（对数刻度）',
+      bar: '事先定的标准 0.85', prefix: (s) => `前 ${s} 步`, compressed: '压缩调度，512 步', full: '完整',
       spearman: 'Spearman', pairAcc: '配对准确率',
       roundAria: ['第一轮候选相对 Block AttnRes 的 dev BPB 差值', '第二轮候选相对 Block AttnRes 的 dev BPB 差值'],
-      winnerLine: '胜出线', updates: '训练步数', stepAt: (s) => `第 ${s} 步`,
+      winnerLine: '胜出线', zeroRef: (name) => `${name}（基准，差值为 0）`, updates: '训练步数', stepAt: (s) => `第 ${s} 步`,
       noiseBand: '两次相同训练之间的差异（±0.0004）',
       marginalAria: '各项改动的边际效果随训练步数的变化',
       marginalPanels: ['加入 Full AttnRes', '加入 Canon-A/C', '加入 Gate'], onBase: (b) => `加在 ${b} 上`,
@@ -62,17 +66,21 @@
       canonNotes: ['每个输出只混合当前和前 3 个位置，看不到后面；', '卷积权重初始为 0，训练开始时与不加 Canon 完全一样。'],
       mechLegend: ['深度方向（Full AttnRes）', '序列方向（Canon 层）'],
       contextAria: '已发布结果的 CORE 与验证 BPB',
-      scatterTitle: (n) => `(a) ${n} 个已发布结果`, scatterSub: '越靠右上越好', scatterX: '验证 BPB（向右更低）', scatterY: 'CORE ×100',
+      scatterTitle: (n) => `(a) ${n} 个已发布结果`, scatterSub: '越靠右上越好', scatterX: '验证 BPB（向右更低）', scatterY: 'CORE', better: '两项都更好',
       tasksTitle: '(b) 逐任务得分差', tasksSub: 'AttnRes-Canon − Block AttnRes，满分 100',
       boolqNote: ['2.0 分的领先里，', 'BoolQ 占 1.3 分'], others: '其他已发布结果', diff: '差值',
       formalAria: '完整训练中相对 Block AttnRes 的验证 BPB 与 CORE 差值',
-      lr: '学习率', lrFlat: '恒定学习率', lrDecay: '线性衰减到 5%',
-      formalA: '(a) 验证 BPB 差值', formalB: '(b) CORE ×100 差值', formalBShort: '(b) CORE ×100 差值',
+      lr: '学习率', lrFlat: '学习率不变', lrDecay: '线性下降到 5%',
+      formalA: '(a) 验证 BPB 差值', formalB: '(b) CORE 差值', formalBShort: '(b) CORE 差值',
       decay: '学习率衰减阶段', markStep: (s) => `${s} 步`, markEnd: '终点',
       formalLegend: ['AttnRes-Canon − Block AttnRes', 'mHC − Block AttnRes'],
     },
     en: {
       replay: 'Replay animation',
+      shortAria: 'Two ways to cut training short',
+      shortTitles: ['Full training: 46,875 updates', 'Compressed: 512 updates', 'Prefix: first 2,000 updates'],
+      shortNotes: ['constant first, then a linear decline', 'the whole schedule squeezed in; it declines early', 'constant, as at the start of a full run'],
+      shortScore: (v) => `rank correlation ${v}`, shortPrefix: 'the prefix is this part', shortUnit: 'updates', shortLr: 'learning rate',
       lineageAria: 'Search path',
       lineageHead: [['Baselines', 'existing Arena methods'], ['Round 1', '5 single changes, 1 control'], ['Round-2 pool', '10 candidates, 6 run'], ['Round 3', 'a single run']],
       anchorSub: (v) => `dev BPB ${v} at 2,000`, finalSub: (d) => `Δ ${d} ✓ final model`,
@@ -80,7 +88,7 @@
       lineagePath: 'Path to the final model', lineageWin: '✓ beats the winning line', lineageDelta: 'Δ: dev BPB minus Block AttnRes at update 2,000',
       flowAria: 'The search workflow',
       flowSteps: [['Baselines', ['2 baselines train', '2,000 updates; one', 'is repeated: noise', 'δ ≈ 0.0004']], ['Candidates', ['up to 6 per round;', 'one change each,', 'a hypothesis,', 'FLOPs ±1%']],
-        ['Screen · 512', ['cancel if more', 'than 0.030 behind', 'the dense baseline']], ['Rank · 2,000', ['win: more than', '0.001 below the', 'best baseline']], ['Full training', ['best candidate', 'ported, trained', '46,875 updates,', 'ranked by CORE']]],
+        ['Screen · 512', ['cancel if more', 'than 0.030 behind', 'the Dense Baseline']], ['Rank · 2,000', ['win: more than', '0.001 below the', 'best baseline']], ['Full training', ['best candidate', 'ported, trained', '46,875 updates,', 'ranked by CORE']]],
       flowLoop: 'Search loop · at most 3 rounds',
       flowLoopNote: ['next round: combine or extend the changes of the last one', 'at most 600 GPU-hours in total · stop after two rounds without a winner'],
       flowScale: 'Training length (to scale)', flowPhases: ['constant learning rate', 'learning-rate decay'], flowEnd: '46,875 updates',
@@ -94,7 +102,7 @@
       bar: 'bar set in advance: 0.85', prefix: (s) => `first ${s}`, compressed: 'compressed, 512 updates', full: 'full',
       spearman: 'Spearman', pairAcc: 'Pair accuracy',
       roundAria: ['Dev BPB of the round-1 candidates minus Block AttnRes', 'Dev BPB of the round-2 candidates minus Block AttnRes'],
-      winnerLine: 'winning line', updates: 'Update', stepAt: (s) => `update ${s}`,
+      winnerLine: 'winning line', zeroRef: (name) => `${name} (the reference, at 0)`, updates: 'Update', stepAt: (s) => `update ${s}`,
       noiseBand: 'Difference between two identical runs (±0.0004)',
       marginalAria: 'Marginal effect of each change by update',
       marginalPanels: ['Adding Full AttnRes', 'Adding Canon-A/C', 'Adding Gate'], onBase: (b) => `on ${b}`,
@@ -111,12 +119,12 @@
       canonNotes: ['Each output mixes its own input and the three before it,', 'never a later one. The weights start at zero, so training', 'begins exactly as it would without Canon.'],
       mechLegend: ['Depth (Full AttnRes)', 'Sequence (Canon layers)'],
       contextAria: 'CORE and validation BPB of the published results',
-      scatterTitle: (n) => `(a) ${n} published results`, scatterSub: 'up and to the right is better', scatterX: 'Validation BPB (lower to the right)', scatterY: 'CORE ×100',
+      scatterTitle: (n) => `(a) ${n} published results`, scatterSub: 'up and to the right is better', scatterX: 'Validation BPB (lower to the right)', scatterY: 'CORE', better: 'better on both',
       tasksTitle: '(b) Per-task score difference', tasksSub: 'AttnRes-Canon − Block AttnRes, out of 100',
       boolqNote: ['Of the 2.0-point lead,', 'BoolQ supplies 1.3'], others: 'Other published results', diff: 'difference',
       formalAria: 'Validation BPB and CORE relative to Block AttnRes over the formal runs',
       lr: 'LR', lrFlat: 'constant learning rate', lrDecay: 'linear decay to 5%',
-      formalA: '(a) Validation BPB gap', formalB: '(b) CORE ×100 gap', formalBShort: '(b) CORE ×100 gap',
+      formalA: '(a) Validation BPB gap', formalB: '(b) CORE gap', formalBShort: '(b) CORE gap',
       decay: 'Learning-rate decay', markStep: (s) => `update ${s}`, markEnd: 'end',
       formalLegend: ['AttnRes-Canon − Block AttnRes', 'mHC − Block AttnRes'],
     },
@@ -124,7 +132,7 @@
 
   // Readable names, shared by every figure. Method names are not translated: the Chinese page uses the same ones.
   const NAME = {
-    dense_full: 'Dense baseline', attnres: 'Block AttnRes', attnres_full: 'Full AttnRes', attnres_canon: 'Canon-A/C',
+    dense_full: 'Dense Baseline', attnres: 'Block AttnRes', attnres_full: 'Full AttnRes', attnres_canon: 'Canon-A/C',
     attnres_gate: 'Gate', attnres_deep: 'Deep-narrow', attnres_ve_all: { zh: '每层 value embedding', en: 'VE in every layer' },
     dense_full_gate: 'Dense + Gate', attnres_full_canon: 'Full + Canon-A/C', attnres_canon_abcd: 'Canon-A–D',
     attnres_full_gate: 'Full + Gate', attnres_gate_canon: 'Gate + Canon-A/C', attnres_full_gate_canon: 'Full + Gate + Canon-A/C',
@@ -420,7 +428,7 @@
     const box = s('rect', { x, y, width: NW, height: NH, rx: 8 }, group);
     let fill = css('--surface'), stroke = css('--axis'), ink = css('--text-primary'), sub;
     if (c.role === 'anchor') { fill = css('--wash'); sub = T.anchorSub(final(method).toFixed(4)); }
-    else if (c.role === 'final') { fill = css('--series-1'); stroke = css('--series-1'); ink = '#ffffff'; sub = T.finalSub(signed(final(method) - ANCHOR)); }
+    else if (c.role === 'final') { fill = css('--series-1'); stroke = css('--series-1'); ink = css('--on-fill'); sub = T.finalSub(signed(final(method) - ANCHOR)); }
     else if (skipped) { box.setAttribute('stroke-dasharray', '4 3'); fill = 'transparent'; ink = css('--text-muted'); sub = tr(c.why); }
     else {
       const d = final(method) - ANCHOR;
@@ -432,7 +440,7 @@
     box.setAttribute('stroke-width', beats ? 1.6 : 1);
     if (mark && ON_PATH.has(id) && c.role !== 'final') s('rect', { x: x + 1.5, y: y + 7, width: 3.5, height: NH - 14, rx: 1.75, fill: css('--series-1') }, group);
     const title = st(group, x + 11, y + NH / 2 - 3, nameOf(method), { 'font-size': 12.5, fill: ink, 'font-weight': c.role === 'final' || beats ? 650 : 500 });
-    const note = st(group, x + 11, y + NH / 2 + 12, sub, { 'font-size': 11, fill: c.role === 'final' ? '#ffffff' : css('--text-secondary') });
+    const note = st(group, x + 11, y + NH / 2 + 12, sub, { 'font-size': 11, fill: c.role === 'final' ? css('--on-fill') : css('--text-secondary') });
     fit(title, NW - 18); fit(note, NW - 18);
     return group;
   }
@@ -518,7 +526,7 @@
   function drawWorkflow(host, ctx) {
     const W = ctx.W, small = W < 640;
     const ink = css('--text-primary'), sub = css('--text-secondary'), muted = css('--text-muted'), surface = css('--surface');
-    const blue = css('--series-1'), axis = css('--axis'), wash = css('--wash');
+    const blue = css('--loop'), hero = css('--series-1'), onFill = css('--on-fill'), axis = css('--axis'), wash = css('--wash');
     const wrap = h('div', { class: 'flowing is-paused' });
     host.appendChild(wrap);
     const steps = T.flowSteps, notes = T.flowLoopNote, LINE = 15, PADT = 30;
@@ -567,11 +575,11 @@
     boxes.forEach((b, i) => {
       const [title, lines] = steps[i], final = i === 4, inside = i >= 1 && i <= 3;
       const card = s('g', {}, svg);
-      s('rect', { x: b.x, y: b.y, width: b.w, height: b.h, rx: 9, fill: final ? blue : surface, stroke: final || inside ? blue : axis, 'stroke-width': inside ? 1.5 : 1 }, card);
-      s('circle', { cx: b.x + 18, cy: b.y + 18, r: 9, fill: final ? '#ffffff' : inside ? blue : muted }, card);
-      st(card, b.x + 18, b.y + 22, i + 1, { 'font-size': 11, 'font-weight': 700, 'text-anchor': 'middle', fill: final ? blue : '#ffffff' });
-      fit(st(card, b.x + 33, b.y + 22.5, title, { 'font-size': 12.5, 'font-weight': 650, fill: final ? '#ffffff' : ink }), b.w - 40);
-      lines.forEach((line, k) => fit(st(card, b.x + 12, b.y + PADT + 14 + k * LINE, line, { 'font-size': 11, fill: final ? '#ffffff' : sub }), b.w - 20));
+      s('rect', { x: b.x, y: b.y, width: b.w, height: b.h, rx: 10, fill: final ? hero : surface, stroke: final ? hero : inside ? blue : axis, 'stroke-width': inside ? 1.5 : 1 }, card);
+      s('circle', { cx: b.x + 18, cy: b.y + 18, r: 9, fill: final ? onFill : inside ? blue : muted }, card);
+      st(card, b.x + 18, b.y + 22, i + 1, { 'font-size': 11, 'font-weight': 700, 'text-anchor': 'middle', fill: final ? hero : onFill });
+      fit(st(card, b.x + 33, b.y + 22.5, title, { 'font-size': 12.5, 'font-weight': 650, fill: final ? onFill : ink }), b.w - 40);
+      lines.forEach((line, k) => fit(st(card, b.x + 12, b.y + PADT + 14 + k * LINE, line, { 'font-size': 11, fill: final ? onFill : sub }), b.w - 20));
       A.fade(card, 150 + i * 200, 420, 6);
       if (i === 4) return;
       const next = boxes[i + 1];
@@ -619,6 +627,66 @@
     ctx.loop(wrap, (on) => wrap.classList.toggle('is-paused', !on), () => {});
   }
 
+  // ---------- figure: two ways to cut training short (schematic) ----------
+  // Three small panels with the same learning-rate axis: the full schedule, the same shape squeezed into 512 updates,
+  // and the first 2,000 updates of the full schedule. The two short forms carry the rank correlation they reached.
+  function drawShorten(host, ctx) {
+    const row = ctx.W >= 600, GAP = 24;
+    const PW = row ? Math.floor((ctx.W - 2 * GAP) / 3) : ctx.W;
+    const wrap = h('div', { class: 'panels' });
+    if (row) { wrap.style.gridTemplateColumns = 'repeat(3, minmax(0, 1fr))'; wrap.style.columnGap = `${GAP}px`; }
+    host.appendChild(wrap);
+    const ink = css('--text-primary'), sub = css('--text-secondary'), muted = css('--text-muted'), surface = css('--surface');
+    const prefixScore = D.proxy.backtest.find((r) => r[0] === 2000)[1];
+    const PANELS = [
+      { key: 'full', end: '46,875', color: css('--neutral-mark'), soft: css('--wash'), decay: true },
+      { key: 'compressed', end: '512', color: css('--emph'), soft: css('--emph-soft'), decay: true, score: D.proxy.spearman, ok: false },
+      { key: 'prefix', end: '2,000', color: css('--chart-line'), soft: css('--lr-fill'), decay: false, score: prefixScore, ok: true },
+    ];
+    PANELS.forEach((p, i) => {
+      const H = 176, ML = 8, MR = 8, MT = 24, MB = 48;
+      const area = { left: ML, right: PW - MR, top: MT, bottom: H - MB };
+      const box = h('div', { class: 'panel' }, [h('div', { class: 'fig-title', text: T.shortTitles[i] })]);
+      wrap.appendChild(box);
+      const svg = svgRoot(PW, H, T.shortTitles[i]);
+      box.appendChild(svg);
+      const A = ctx.timeline(svg, `shorten-${p.key}`);
+      const x = linear(0, 1, area.left, area.right), y = linear(0, 1, area.bottom, area.top + 8);
+      st(svg, area.left, 12, T.shortLr, { 'font-size': 11.5, fill: muted });
+      s('line', { x1: area.left, y1: y(1), x2: area.right, y2: y(1), stroke: css('--grid') }, svg);
+      s('line', { x1: area.left, y1: area.bottom, x2: area.right, y2: area.bottom, stroke: css('--axis') }, svg);
+      const frac = DECAY_START / LAST;
+      const pts = (p.decay ? [[0, 1], [frac, 1], [1, 0.05]] : [[0, 1], [1, 1]]).map(([u, v]) => ({ px: x(u), py: y(v) }));
+      const fill = s('path', { fill: p.soft }, svg);
+      const line = s('path', { fill: 'none', stroke: p.color, 'stroke-width': 2.2, 'stroke-linejoin': 'round', 'stroke-linecap': 'round' }, svg);
+      const shape = (cut) => { const d = pathUpTo(pts, cut); line.setAttribute('d', d); fill.setAttribute('d', `${d} V${area.bottom} H${area.left} Z`); };
+      shape(Infinity);
+      A.tween(200 + i * 700, 900, (t) => shape(area.left + t * (area.right - area.left)), (t) => t);
+      st(svg, area.left, area.bottom + 16, '0', { 'font-size': 11.5, fill: muted });
+      st(svg, area.right, area.bottom + 16, `${p.end} ${T.shortUnit}`, { 'font-size': 11.5, 'text-anchor': 'end', fill: muted });
+      fit(st(svg, area.left, area.bottom + 36, T.shortNotes[i], { 'font-size': 12, fill: sub }), PW - area.left - 3);
+      const extras = [];
+      if (p.key === 'full') {   // where the prefix sits in the full schedule
+        const end = Math.max(x(2000 / LAST), area.left + 7), mark = s('g', {}, svg);
+        s('rect', { x: area.left, y: y(1) - 3, width: end - area.left, height: area.bottom - y(1) + 3, fill: css('--chart-line'), 'fill-opacity': 0.85 }, mark);
+        s('path', { d: `M${end + 3},${y(0.52)} h10`, stroke: muted, 'stroke-width': 1, fill: 'none' }, mark);
+        st(mark, end + 16, y(0.52) + 4, T.shortPrefix, { 'font-size': 11.5, fill: sub });
+        extras.push(mark);
+      } else {
+        const chip = s('g', {}, svg), label = T.shortScore(p.score.toFixed(2));
+        const text = st(chip, 0, 0, label, { 'font-size': 12.5, 'font-weight': 650, fill: ink });
+        const w = text.getComputedTextLength() + 38, cx = p.decay ? area.left + 6 : (area.left + area.right - w) / 2, cy = y(p.decay ? 0.19 : 0.5);
+        const pill = s('rect', { x: cx, y: cy - 13, width: w, height: 26, rx: 13, fill: surface, stroke: p.color, 'stroke-width': 1.2 }, chip);
+        chip.insertBefore(pill, text);
+        s('circle', { cx: cx + 14, cy, r: 7, fill: p.color }, chip);
+        s('path', { d: p.ok ? `M${cx + 10.6},${cy + 0.2} l2.4,2.4 l4.2,-4.6` : `M${cx + 11},${cy - 3} l6,6 M${cx + 17},${cy - 3} l-6,6`, fill: 'none', stroke: css('--on-fill'), 'stroke-width': 1.6, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }, chip);
+        text.setAttribute('x', cx + 27); text.setAttribute('y', cy + 4.5);
+        extras.push(chip);
+      }
+      A.fade(extras, 1000 + i * 700, 450);
+    });
+  }
+
   // ---------- figure: short-run rank against final rank ----------
   function drawSlope(host, ctx) {
     const W = ctx.W, small = W < 560, rows = D.proxy.methods;
@@ -629,11 +697,12 @@
     const A = ctx.timeline(svg, 'slope');
     const y = (rank) => TOP + (rank - 1) * ROW;
     const ink = css('--text-primary'), sub = css('--text-secondary'), muted = css('--text-muted'), surface = css('--surface');
-    const COLOR = { base: css('--neutral-mark'), loop: css('--neg'), linear: css('--pos') };
+    const COLOR = { base: css('--fam-base'), loop: css('--fam-loop'), linear: css('--fam-linear') };
     // Column heads sit over the rank numbers; on narrow layouts the right one is flush with the right edge.
     [[lx + 6, 'end', T.slopeHead[0]], small ? [W, 'end', T.slopeHead[1]] : [rx - 6, 'start', T.slopeHead[1]]].forEach(([x, anchor, [title, note]]) => {
-      st(svg, x, 14, title, { 'font-size': 12.5, 'font-weight': 650, fill: ink, 'text-anchor': anchor });
-      st(svg, x, 30, note, { 'font-size': 11, fill: muted, 'text-anchor': anchor });
+      const room = anchor === 'start' ? W - x : x === W ? W - lx - 16 : x;
+      fit(st(svg, x, 14, title, { 'font-size': 12.5, 'font-weight': 650, fill: ink, 'text-anchor': anchor }), room);
+      fit(st(svg, x, 30, note, { 'font-size': 11, fill: muted, 'text-anchor': anchor }), room);
     });
     for (let rank = 1; rank <= rows.length; rank++) s('line', { x1: lx, y1: y(rank), x2: rx, y2: y(rank), stroke: css('--grid') }, svg);
     const DELAY = { base: 150, loop: 550, linear: 950 };
@@ -677,24 +746,24 @@
     const A = ctx.timeline(svg, 'backtest');
     const lx = (v) => Math.log(v), xs = linear(lx(250), lx(LAST), area.left, area.right), x = (v) => xs(lx(v));
     const y = linear(0.3, 1.0, area.bottom, area.top);
-    const ink = css('--text-primary'), sub = css('--text-secondary'), muted = css('--text-muted'), surface = css('--surface'), blue = css('--series-1'), red = css('--neg');
+    const ink = css('--text-primary'), sub = css('--text-secondary'), muted = css('--text-muted'), surface = css('--surface'), blue = css('--chart-line'), red = css('--emph');
     st(svg, 0, 12, T.backY, { 'font-size': 11.5, fill: sub });
     for (const v of [0.4, 0.6, 0.8, 1.0]) {
       s('line', { x1: area.left, y1: y(v), x2: area.right, y2: y(v), stroke: css('--grid') }, svg);
-      st(svg, area.left - 8, y(v) + 4, v.toFixed(1), { 'font-size': 11, 'text-anchor': 'end', fill: muted });
+      st(svg, area.left - 8, y(v) + 4, v.toFixed(1), { 'font-size': 12, 'text-anchor': 'end', fill: muted });
     }
     const ticks = [[250, '250'], [500, '500'], [1000, '1K'], [2000, '2K'], [4000, '4K'], [8000, '8K'], [16500, '16.5K'], [LAST, '46,875']];
     ticks.forEach(([v, label], i) => {
       s('line', { x1: x(v), y1: area.bottom, x2: x(v), y2: area.bottom + 4, stroke: css('--axis') }, svg);
       if (small && i % 2 === 1 && i !== ticks.length - 1) return;
-      st(svg, x(v), area.bottom + 18, label, { 'font-size': 11, 'text-anchor': i === ticks.length - 1 ? 'end' : 'middle', fill: muted });
+      st(svg, x(v), area.bottom + 18, label, { 'font-size': 12, 'text-anchor': i === ticks.length - 1 ? 'end' : 'middle', fill: muted });
     });
     s('line', { x1: area.left, y1: area.bottom, x2: area.right, y2: area.bottom, stroke: css('--axis') }, svg);
-    st(svg, (area.left + area.right) / 2, H - 6, T.backX, { 'font-size': 11, 'text-anchor': 'middle', fill: muted });
+    st(svg, (area.left + area.right) / 2, H - 6, T.backX, { 'font-size': 12, 'text-anchor': 'middle', fill: muted });
     // The bar the proxy had to clear.
     const bar = s('g', {}, svg);
     s('line', { x1: area.left, y1: y(0.85), x2: area.right, y2: y(0.85), stroke: sub, 'stroke-width': 1.2, 'stroke-dasharray': '5 3' }, bar);
-    st(bar, area.right - 2, y(0.85) + 15, T.bar, { 'font-size': 11, 'text-anchor': 'end', fill: sub });
+    st(bar, area.right - 2, y(0.85) + 15, T.bar, { 'font-size': 12, 'text-anchor': 'end', fill: sub });
     A.fade(bar, 0, 400);
     const pts = rows.map(([step, sp]) => ({ step, v: sp, px: x(step), py: y(sp) }));
     const line = s('path', { d: fullPath(pts), fill: 'none', stroke: blue, 'stroke-width': 2, 'stroke-linejoin': 'round', 'stroke-linecap': 'round' }, svg);
@@ -727,7 +796,7 @@
   // One panel of differences by update. Wide panels label each series at its right end; narrow panels are plot-only and
   // list the series in a legend below. Stages draw one after another; a playhead follows the sweep.
   function curvePanel(host, ctx, opts) {
-    const { title, series, value, label, lo, hi, winner, marks, key } = opts;
+    const { title, series, value, label, lo, hi, winner, marks, key, zeroLabel } = opts;
     const stages = opts.stages || [series];
     const W = opts.W || ctx.W, wide = W >= 640, compact = opts.compact;
     const H = compact ? 214 : wide ? 286 : 240;
@@ -745,16 +814,18 @@
     s('rect', { x: area.left, y: y(DELTA), width: area.right - area.left, height: y(-DELTA) - y(DELTA), fill: css('--wash') }, svg);
     for (let v = lo; v <= hi + 1e-9; v += 0.001) {
       const yy = y(v), zero = Math.abs(v) < 1e-9, labelled = Math.round(v * 1000) % 2 === 0;
-      s('line', { x1: area.left, y1: yy, x2: area.right, y2: yy, stroke: zero ? css('--axis') : css('--grid') }, svg);
-      if (labelled || zero || compact) st(svg, area.left - 8, yy + 4, zero ? '0' : signed(v, 3), { 'font-size': 11, 'text-anchor': 'end', fill: zero ? ink : muted, 'font-weight': zero ? 650 : 400 });
+      if (zero && zeroLabel) {
+        s('line', { x1: area.left, y1: yy, x2: area.right, y2: yy, stroke: css('--neutral-mark'), 'stroke-width': 1.4, 'stroke-dasharray': '6 4' }, svg);
+      } else s('line', { x1: area.left, y1: yy, x2: area.right, y2: yy, stroke: zero ? css('--axis') : css('--grid') }, svg);
+      if (labelled || zero || compact) st(svg, area.left - 8, yy + 4, zero ? '0' : signed(v, 3), { 'font-size': 12, 'text-anchor': 'end', fill: zero ? ink : muted, 'font-weight': zero ? 650 : 400 });
     }
     const ticks = compact || !wide ? [512, 1024, 1536, 2000] : STEPS;   // fewer labels where they would collide
-    for (const step of ticks) st(svg, x(step), area.bottom + 17, n(step), { 'font-size': 11, 'text-anchor': step === 2000 && !wide ? 'end' : 'middle', fill: muted });
-    if (!compact) st(svg, area.right, area.bottom + 32, T.updates, { 'font-size': 11, 'text-anchor': 'end', fill: muted });
+    for (const step of ticks) st(svg, x(step), area.bottom + 17, n(step), { 'font-size': 12, 'text-anchor': step === 2000 && !wide ? 'end' : 'middle', fill: muted });
+    if (!compact) st(svg, area.right, area.bottom + 32, T.updates, { 'font-size': 12, 'text-anchor': 'end', fill: muted });
     for (const mark of marks || []) {
       const g = s('g', {}, svg);
       s('line', { x1: x(mark.step), y1: area.top, x2: x(mark.step), y2: area.bottom, stroke: sub, 'stroke-width': 1, 'stroke-dasharray': '2 3' }, g);
-      st(g, x(mark.step) - 6, area.top + 11, mark.text, { 'font-size': 11, 'text-anchor': 'end', fill: sub });
+      st(g, x(mark.step) - 6, area.top + 11, mark.text, { 'font-size': 12, 'text-anchor': 'end', fill: sub });
       A.fade(g, mark.delay || 0, 400);
     }
     const ends = [];
@@ -767,18 +838,19 @@
     const drawn = {};
     for (const m of [...series].reverse()) {
       const pts = STEPS.map((step) => ({ step, d: value(m, step), px: x(step), py: y(value(m, step)) }));
-      const color = (opts.color || colorOf)(m);
+      const color = (opts.color || colorOf)(m), minor = !SLOT[m] && m !== 'attnres';
       const group = s('g', { class: 'series', 'data-key': m }, svg);
-      const path = s('path', { d: fullPath(pts), fill: 'none', stroke: color, 'stroke-width': 2, 'stroke-linejoin': 'round', 'stroke-linecap': 'round' }, group);
+      const path = s('path', { d: fullPath(pts), fill: 'none', stroke: color, 'stroke-width': minor ? 1.6 : 2.2, 'stroke-linejoin': 'round', 'stroke-linecap': 'round' }, group);
+      if (m === 'attnres') path.setAttribute('stroke-dasharray', '6 4');   // the reference model, dashed as on the observatory
       const last = pts[pts.length - 1];
       const dot = s('circle', { cx: last.px, cy: last.py, r: 4, fill: color, stroke: surface, 'stroke-width': 2 }, group);
       drawn[m] = { pts, path, dot, color };
-      ends.push({ key: m, y: last.py, d: last.d, color, text: `${label(m)}  ${signed(last.d)}` });
+      ends.push({ key: m, y: last.py, d: last.d, color, text: `${label(m)}  ${signed(last.d)}`, kind: m === 'attnres' ? 'dash' : '' });
     }
     // Sweep: each stage draws its series left to right, with a playhead that names the update it has reached.
     const head = s('g', { opacity: 0, 'pointer-events': 'none' }, svg);
     const rule = s('line', { y1: area.top, y2: area.bottom, stroke: muted, 'stroke-width': 1 }, head);
-    const tag = st(head, 0, area.top - 2, '', { 'font-size': 11, fill: sub, 'text-anchor': 'middle' });
+    const tag = st(head, 0, area.top - 2, '', { 'font-size': 12, fill: sub, 'text-anchor': 'middle' });
     const SWEEP = opts.sweep || 1900, PAUSE = 350;
     const stageEnd = {};
     stages.forEach((members, i) => {
@@ -827,8 +899,8 @@
   const drawRound = (index) => (host, ctx) => {
     const value = (m, step) => devAt(m, step) - devAt('attnres', step);
     const [lo, hi] = range(ROUNDS.flat().flatMap((m) => STEPS.map((step) => value(m, step))).concat([0, LINE - ANCHOR]));
-    curvePanel(host, ctx, { key: `round${index + 1}`, aria: T.roundAria[index], series: ROUNDS[index], value, label: nameOf, lo, hi, winner: true });
-    host.appendChild(legend([noiseLegend()]));
+    curvePanel(host, ctx, { key: `round${index + 1}`, aria: T.roundAria[index], series: ROUNDS[index], value, label: nameOf, lo, hi, winner: true, zeroLabel: true });
+    host.appendChild(legend([[T.zeroRef('Block AttnRes'), css('--neutral-mark'), 'dash'], noiseLegend()]));
   };
 
   // The effect of adding one change to three different bases, by update: one small panel per change.
@@ -854,7 +926,7 @@
       });
     });
     const bases = ['attnres', 'attnres_full', 'attnres_canon', 'attnres_gate'];
-    host.appendChild(legend(bases.map((b) => [T.onBase(nameOf(b)), colorOf(b)]).concat([noiseLegend()])));
+    host.appendChild(legend(bases.map((b) => [T.onBase(nameOf(b)), colorOf(b), b === 'attnres' ? 'dash' : '']).concat([noiseLegend()])));
   }
 
   function drawBasis(host, ctx) {
@@ -862,11 +934,11 @@
     const value = (m, step) => devAt(m, step) - devAt('attnres_canon', step);
     const [lo, hi] = range(series.flatMap((m) => STEPS.map((step) => value(m, step))).concat([0]));
     curvePanel(host, ctx, {
-      key: 'basis', aria: T.basisAria, series, value, label: (m) => T.basisNames[m], lo, hi, winner: false, sweep: 1500,
+      key: 'basis', aria: T.basisAria, series, value, label: (m) => T.basisNames[m], lo, hi, winner: false, sweep: 1500, zeroLabel: true,
       stages: [['attnres_full_canon', 'attnres_canon_abcd'], ['attnres_full_canon_abcd']],
       marks: [{ step: 1536, text: T.decided, delay: 200 + 1500 * ((1536 - 512) / (2000 - 512)) }],
     });
-    host.appendChild(legend([noiseLegend()]));
+    host.appendChild(legend([[T.zeroRef('Canon-A/C'), css('--neutral-mark'), 'dash'], noiseLegend()]));
   }
 
   // ---------- figure: mechanism (two schematic panels, side by side on wide containers and stacked on narrow ones) ----------
@@ -998,19 +1070,27 @@
       const svg = svgRoot(W, H, T.contextAria);
       box.appendChild(svg);
       const A = ctx.timeline(svg, 'scatter');
-      const x = linear(0.72, 0.658, area.left + 6, area.right - ROOM), y = linear(22, 37, area.bottom, area.top);
+      const x = linear(0.72, 0.658, area.left + 6, area.right - ROOM), y = linear(22, 38, area.bottom, area.top);
       for (const v of [24, 28, 32, 36]) {
         s('line', { x1: area.left, y1: y(v), x2: area.right, y2: y(v), stroke: css('--grid') }, svg);
-        st(svg, area.left - 8, y(v) + 4, v, { 'font-size': 11, 'text-anchor': 'end', fill: muted });
+        st(svg, area.left - 8, y(v) + 4, v, { 'font-size': 12, 'text-anchor': 'end', fill: muted });
       }
       s('line', { x1: area.left, y1: area.bottom, x2: area.right, y2: area.bottom, stroke: css('--axis') }, svg);
       for (const v of [0.72, 0.71, 0.70, 0.69, 0.68, 0.67, 0.66]) {
         s('line', { x1: x(v), y1: area.bottom, x2: x(v), y2: area.bottom + 4, stroke: css('--axis') }, svg);
         if (W < 420 && Math.round(v * 100) % 2 === 1) continue;
-        st(svg, x(v), area.bottom + 18, v.toFixed(2), { 'font-size': 11, 'text-anchor': 'middle', fill: muted });
+        st(svg, x(v), area.bottom + 18, v.toFixed(2), { 'font-size': 12, 'text-anchor': 'middle', fill: muted });
       }
-      st(svg, (area.left + area.right - ROOM) / 2, H - 6, T.scatterX, { 'font-size': 11, 'text-anchor': 'middle', fill: muted });
-      st(svg, area.left + 4, area.top + 9, T.scatterY, { 'font-size': 11, fill: muted });
+      st(svg, (area.left + area.right - ROOM) / 2, H - 6, T.scatterX, { 'font-size': 12, 'text-anchor': 'middle', fill: muted });
+      st(svg, area.left + 4, area.top + 9, T.scatterY, { 'font-size': 12, fill: muted });
+      const dense = D.published.find((r) => r.id === 'dense_full');
+      if (dense) {
+        const guide = s('g', {}, svg);
+        s('line', { x1: area.left, y1: y(dense.core), x2: area.right, y2: y(dense.core), stroke: css('--axis'), 'stroke-width': 1.2, 'stroke-dasharray': '1 5', 'stroke-linecap': 'round' }, guide);
+        s('line', { x1: x(dense.bpb), y1: area.top, x2: x(dense.bpb), y2: area.bottom, stroke: css('--axis'), 'stroke-width': 1.2, 'stroke-dasharray': '1 5', 'stroke-linecap': 'round' }, guide);
+        st(guide, area.right - 2, area.top + 10, `${T.better} ↗`, { class: 'note', 'font-size': 13, 'text-anchor': 'end', fill: css('--emph') });
+        A.fade(guide, 0, 500);
+      }
       // Labels: [dx, dy] from the dot; the lower-BPB side of the cloud is empty, so labels sit to the right.
       const LABEL = { attnres_full_canon_abcd: [11, 4], mhc: [11, 9], attnres: [10, 6], dense_full: [15, 22] };
       const rank = (r) => (r.id === 'attnres_full_canon_abcd' ? 2 : LABEL[r.id] ? 1 : 0);
@@ -1019,6 +1099,7 @@
         const main = r.id === 'attnres_full_canon_abcd', named = Boolean(LABEL[r.id]);
         const cx = x(r.bpb), cy = y(r.core);
         const g = s('g', { class: 'series', 'data-key': r.id }, svg);
+        if (main) s('circle', { cx, cy, r: 11, fill: css('--emph'), 'fill-opacity': 0.16, stroke: css('--emph'), 'stroke-width': 1.2 }, g);
         const dot = s('circle', { cx, cy, r: main ? 6.5 : named ? 4.6 : 4, fill: main ? blue : named ? dark : gray, stroke: surface, 'stroke-width': main ? 2 : 1.5 }, g);
         if (named) {
           const [dx, dy] = LABEL[r.id];
@@ -1093,39 +1174,39 @@
     const x = linear(0, LAST, ML, W - MR);
     const ya = linear(-0.008, 0.001, PA.bottom, PA.top), yb = linear(-0.5, 2.5, PB.bottom, PB.top);
     const ink = css('--text-primary'), sub = css('--text-secondary'), muted = css('--text-muted'), surface = css('--surface');
-    const blue = css('--series-1'), gray = css('--neutral-mark');
+    const blue = css('--series-1'), gray = css('--ref-mark');
     const clip = s('clipPath', { id: 'formal-plot' }, s('defs', {}, svg));   // early mHC values lie above the range
     s('rect', { x: ML, y: PA.top, width: W - MR - ML, height: PA.bottom - PA.top }, clip);
     // The decay phase shades all three bands.
-    s('rect', { x: x(DECAY_START), y: LR.top, width: x(LAST) - x(DECAY_START), height: PB.bottom - LR.top, fill: css('--wash'), opacity: 0.75 }, svg);
+    s('rect', { x: x(DECAY_START), y: LR.top, width: x(LAST) - x(DECAY_START), height: PB.bottom - LR.top, fill: css('--wash'), opacity: 0.6 }, svg);
     // Learning-rate strip: constant, then a linear decay.
     const lrY = linear(0, 1, LR.bottom, LR.top + 4);
     const lrPts = [{ px: x(0), py: lrY(1) }, { px: x(DECAY_START), py: lrY(1) }, { px: x(LAST), py: lrY(0.05) }];
-    const lrArea = s('path', { fill: css('--accent-wash'), opacity: 0.7 }, svg);
-    const lrLine = s('path', { d: fullPath(lrPts), fill: 'none', stroke: css('--accent'), 'stroke-width': 1.5 }, svg);
+    const lrArea = s('path', { fill: css('--lr-fill') }, svg);
+    const lrLine = s('path', { d: fullPath(lrPts), fill: 'none', stroke: css('--lr-line'), 'stroke-width': 1.5 }, svg);
     const areaOf = (d) => `${d} V${LR.bottom} H${x(0)} Z`;
     lrArea.setAttribute('d', areaOf(fullPath(lrPts)));
-    st(svg, ML - 8, LR.bottom - 8, T.lr, { 'font-size': 11, 'text-anchor': 'end', fill: muted });
-    st(svg, x(DECAY_START / 2), LR.top - 5, T.lrFlat, { 'font-size': 11, 'text-anchor': 'middle', fill: sub });
-    st(svg, x((DECAY_START + LAST) / 2), LR.top - 5, T.lrDecay, { 'font-size': 11, 'text-anchor': 'middle', fill: sub });
+    st(svg, ML - 8, LR.bottom - 8, T.lr, { 'font-size': 12, 'text-anchor': 'end', fill: muted });
+    st(svg, x(DECAY_START / 2), LR.top - 5, T.lrFlat, { 'font-size': 12, 'text-anchor': 'middle', fill: sub });
+    st(svg, x((DECAY_START + LAST) / 2), LR.top - 5, T.lrDecay, { 'font-size': 12, 'text-anchor': 'middle', fill: sub });
     // (a) validation BPB gap.
     st(svg, ML, PA.top - 10, T.formalA, { 'font-size': 12.5, 'font-weight': 650, fill: ink });
     for (let v = -0.008; v <= 0.001 + 1e-9; v += 0.002) {
       s('line', { x1: ML, y1: ya(v), x2: W - MR, y2: ya(v), stroke: css('--grid') }, svg);
-      st(svg, ML - 8, ya(v) + 4, Math.abs(v) < 1e-9 ? '0' : signed(v, 3), { 'font-size': 11, 'text-anchor': 'end', fill: muted });
+      st(svg, ML - 8, ya(v) + 4, Math.abs(v) < 1e-9 ? '0' : signed(v, 3), { 'font-size': 12, 'text-anchor': 'end', fill: muted });
     }
     s('line', { x1: ML, y1: ya(0), x2: W - MR, y2: ya(0), stroke: css('--axis') }, svg);
-    st(svg, W - MR - 4, ya(0) - 6, 'Block AttnRes', { 'font-size': 11, fill: sub, 'text-anchor': 'end' });
+    st(svg, W - MR - 4, ya(0) - 6, 'Block AttnRes', { 'font-size': 12, fill: sub, 'text-anchor': 'end' });
     const main = pts0.map((p) => ({ step: p.step, px: x(p.step), py: ya(p.d) }));
     const other = pts0.filter((p) => p.dm !== undefined).map((p) => ({ step: p.step, px: x(p.step), py: ya(p.dm) }));
-    const wash = s('path', { fill: blue, opacity: 0.1, 'clip-path': 'url(#formal-plot)' }, svg);
+    const wash = s('path', { fill: css('--chart-line'), opacity: 0.1, 'clip-path': 'url(#formal-plot)' }, svg);
     const otherLine = s('path', { d: fullPath(other), fill: 'none', stroke: gray, 'stroke-width': 1.5, 'stroke-linejoin': 'round', 'clip-path': 'url(#formal-plot)' }, svg);
     const mainLine = s('path', { d: fullPath(main), fill: 'none', stroke: blue, 'stroke-width': 2, 'stroke-linejoin': 'round', 'clip-path': 'url(#formal-plot)' }, svg);
     const washOf = (d, cut) => `${d} L${Math.min(cut, main[main.length - 1].px).toFixed(1)},${ya(0)} L${main[0].px.toFixed(1)},${ya(0)} Z`;
     wash.setAttribute('d', washOf(fullPath(main), Infinity));
     const notes = [];
     const endM = pts0.filter((p) => p.dm !== undefined).pop();
-    notes.push(st(svg, x(endM.step) - 4, ya(endM.dm) - 7, `mHC ${signed(endM.dm)}`, { 'font-size': 11, fill: sub, 'text-anchor': 'end' }));
+    notes.push(st(svg, x(endM.step) - 4, ya(endM.dm) - 7, `mHC ${signed(endM.dm)}`, { 'font-size': 12, fill: sub, 'text-anchor': 'end' }));
     const mark = (step, text, lx, lv, anchor) => {   // label at (lx updates, lv BPB), with a leader to the point
       const p = pts0.find((q) => q.step === step), g = s('g', {}, svg);
       s('line', { x1: x(p.step), y1: ya(p.d), x2: x(lx), y2: ya(lv) + 4, stroke: muted, 'stroke-width': 1 }, g);
@@ -1140,7 +1221,7 @@
     st(svg, ML, PB.top - 12, small ? T.formalBShort : T.formalB, { 'font-size': 12.5, 'font-weight': 650, fill: ink });
     for (const v of [0, 1, 2]) {
       s('line', { x1: ML, y1: yb(v), x2: W - MR, y2: yb(v), stroke: v ? css('--grid') : css('--axis') }, svg);
-      st(svg, ML - 8, yb(v) + 4, v ? `+${v}` : '0', { 'font-size': 11, 'text-anchor': 'end', fill: muted });
+      st(svg, ML - 8, yb(v) + 4, v ? `+${v}` : '0', { 'font-size': 12, 'text-anchor': 'end', fill: muted });
     }
     const coreMain = core.map((p) => ({ step: p.step, px: x(p.step), py: yb(p.d), v: p.d }));
     const coreOther = core.map((p) => ({ step: p.step, px: x(p.step), py: yb(p.dm), v: p.dm }));
@@ -1152,15 +1233,15 @@
     if (small) notes.push(st(svg, lastMain.px - 8, lastMain.py - 3, signed(lastMain.v, 1), { 'font-size': 11.5, 'text-anchor': 'end', fill: ink, 'font-weight': 600 }));
     else {
       notes.push(st(svg, lastMain.px + 9, lastMain.py + 4, signed(lastMain.v, 1), { 'font-size': 11.5, fill: ink, 'font-weight': 600 }));
-      notes.push(st(svg, lastOther.px + 9, lastOther.py + 4, `mHC ${signed(lastOther.v, 1)}`, { 'font-size': 11, fill: sub }));
+      notes.push(st(svg, lastOther.px + 9, lastOther.py + 4, `mHC ${signed(lastOther.v, 1)}`, { 'font-size': 12, fill: sub }));
     }
     notes.push(st(svg, dip.px, dip.py + 16, signed(dip.v, 2), { 'font-size': 11.5, 'text-anchor': 'middle', fill: ink, 'font-weight': 600 }));
     // Shared x axis.
     for (const step of small ? [0, 10000, 20000, 30000, LAST] : [0, 10000, 20000, 30000, 40000, LAST]) {
       const last = step === LAST;
-      st(svg, x(step), PB.bottom + 18, last ? '46,875' : step ? `${step / 1000}K` : '0', { 'font-size': 11, 'text-anchor': last ? 'end' : 'middle', fill: muted });
+      st(svg, x(step), PB.bottom + 18, last ? '46,875' : step ? `${step / 1000}K` : '0', { 'font-size': 12, 'text-anchor': last ? 'end' : 'middle', fill: muted });
     }
-    st(svg, (ML + W - MR) / 2, H - 5, T.updates, { 'font-size': 11, 'text-anchor': 'middle', fill: muted });
+    st(svg, (ML + W - MR) / 2, H - 5, T.updates, { 'font-size': 12, 'text-anchor': 'middle', fill: muted });
     // Sweep all three bands together.
     A.tween(200, 2400, (t) => {
       const cut = ML + t * (W - MR - ML);
@@ -1190,7 +1271,7 @@
 
   // ---------- render ----------
   const FIGURES = {
-    workflow: drawWorkflow, lineage: drawLineage, slope: drawSlope, backtest: drawBacktest, round1: drawRound(0), round2: drawRound(1),
+    shorten: drawShorten, workflow: drawWorkflow, lineage: drawLineage, slope: drawSlope, backtest: drawBacktest, round1: drawRound(0), round2: drawRound(1),
     marginal: drawMarginal, basis: drawBasis, mechanism: drawMechanism, context: drawContext, formal: drawFormal,
   };
   const NO_REPLAY = new Set(['mechanism']);    // it loops while in view, so there is nothing to replay

@@ -9,7 +9,8 @@ Pages at <https://interactive-active-ai.github.io/NextT-Blogs/>.
 
 ## Layout
 
-- `index.html` is the list of posts.
+- `index.html` is the list of posts. It wears the same look as the posts and borrows the stylesheet and brand
+  assets of `attnres-canon/`.
 - Each post is a self-contained static folder (`<post>/index.html`, `<post>/en/index.html`, its own CSS, scripts and
   data) that uses relative links only, so it works under any URL prefix and when opened from disk.
 - There is no build step: Pages serves the `main` branch as is (`.nojekyll` turns Jekyll off).

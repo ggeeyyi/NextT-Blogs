@@ -8,8 +8,11 @@ synchronized versions:
 
 ## Files
 
-- The two `index.html` files hold the text and the hand-typed tables; `styles.css` is shared.
-- `figures.js` draws the eleven figures as inline SVG in the language of `<html lang>`, at the pixel width of their
+- The two `index.html` files hold the text and the hand-typed tables; `styles.css` is shared. The page wears the look
+  of the NextTransformer observatory: its paper, accents, top bar and title card.
+- `assets/` holds what the page borrows from the project: the IAAI logo, the observatory illustration, the project
+  logo and the Kalam fonts of the wordmark (SIL Open Font License, `assets/fonts/Kalam-OFL.txt`).
+- `figures.js` draws the twelve figures as inline SVG in the language of `<html lang>`, at the pixel width of their
   container. Each animates once when it scrolls into view and ends in the complete figure; with reduced motion or in
   print the complete figures are drawn at once.
 - `site.js` handles the theme toggle, reading progress, the section rail and entrance motion. The article reads in

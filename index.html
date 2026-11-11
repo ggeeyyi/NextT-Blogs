@@ -3,85 +3,86 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>NextTransformer Blogs</title>
-  <meta name="description" content="Research posts from NextTransformer, the open arena for Transformer architectures.">
+  <title>NextTransformer Blog</title>
+  <meta name="description" content="Research posts from NextTransformer, the open observatory and auto-research arena for Transformer architectures.">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="NextTransformer Blog">
+  <meta property="og:description" content="Research posts from NextTransformer, the open observatory and auto-research arena for Transformer architectures.">
+  <meta property="og:image" content="https://interactive-active-ai.github.io/NextTransformer/brand/social-preview.jpg">
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <!-- The index wears the same look as the posts and borrows the first post's stylesheet and brand assets. -->
+  <link rel="stylesheet" href="attnres-canon/styles.css">
   <style>
-    :root {
-      color-scheme: light;
-      --page: #f6f8fb; --paper: #ffffff; --ink: #111827; --text-body: #22252a; --text-secondary: #52514e;
-      --text-muted: #898781; --border: #e3e6ec; --border-strong: #cdd5e1; --accent: #2a78d6; --accent-dark: #1c5cab;
-      --link: #1c5cab; --shadow: 0 18px 45px rgba(17, 24, 39, 0.07);
-      --font: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Noto Sans CJK SC",
-        "Microsoft YaHei", Roboto, "Noto Sans", Helvetica, Arial, sans-serif;
+    .post-head { padding-bottom: 176px; }
+    .lead { max-width: 60ch; margin: 16px 0 0; color: var(--ink-soft); font-size: 17px; line-height: 1.7; }
+    .posts { max-width: var(--measure); margin: 30px auto 0; }
+    .posts > .eyebrow { margin: 0 0 12px 2px; }
+    .post-card {
+      display: block; padding: 24px 28px 22px; border: 1px solid var(--line); border-radius: 14px; background: var(--surface);
+      box-shadow: var(--card-shadow); transition: transform 0.25s ease, box-shadow 0.25s ease;
     }
-    @media (prefers-color-scheme: dark) {
-      :root {
-        color-scheme: dark;
-        --page: #0d0d0d; --paper: #151514; --ink: #f0efec; --text-body: #dddcd6; --text-secondary: #c3c2b7;
-        --text-muted: #898781; --border: #2a2a28; --border-strong: #3a3a37; --accent: #3987e5; --accent-dark: #86b6ef;
-        --link: #86b6ef; --shadow: none;
-      }
-    }
-    * { box-sizing: border-box; }
-    html { background: var(--page); }
-    body {
-      margin: 0;
-      min-height: 100vh;
-      background: radial-gradient(circle at 16% 0%, color-mix(in srgb, var(--accent) 10%, transparent), transparent 28rem) no-repeat, var(--page);
-      color: var(--text-body);
-      font: 17px/1.7 var(--font);
-      -webkit-font-smoothing: antialiased;
-    }
-    main { max-width: 840px; margin: 0 auto; padding: 72px 16px 96px; }
-    .eyebrow { margin: 0 0 0.5rem; color: var(--accent-dark); font-size: 0.82rem; font-weight: 650; letter-spacing: 0.08em; }
-    h1 { margin: 0 0 0.6rem; color: var(--ink); font-size: 2.3rem; font-weight: 760; line-height: 1.2; }
-    .lead { margin: 0 0 2.6rem; color: var(--text-secondary); }
-    .post {
-      background: var(--paper); border: 1px solid var(--border); border-radius: 16px; box-shadow: var(--shadow);
-      padding: 26px 28px; margin-bottom: 20px;
-    }
-    .post-meta { margin: 0 0 0.6rem; color: var(--text-muted); font-size: 0.88rem; }
-    .post h2 { margin: 0 0 0.25rem; font-size: 1.32rem; font-weight: 740; line-height: 1.4; }
-    .post h2 + h2 { font-size: 1.08rem; font-weight: 620; }
-    .post h2 a { color: var(--ink); text-decoration: none; }
-    .post h2 a:hover { color: var(--link); }
-    .post p.summary { margin: 0.8rem 0 1rem; }
-    .langs { display: flex; gap: 10px; flex-wrap: wrap; margin: 0; padding: 0; list-style: none; font-size: 0.9rem; }
-    .langs a {
-      display: inline-block; color: var(--link); text-decoration: none; border: 1px solid var(--border-strong);
-      border-radius: 999px; padding: 3px 14px;
-    }
-    .langs a:hover { border-color: var(--accent); }
-    footer { margin-top: 3rem; color: var(--text-muted); font-size: 0.88rem; }
-    footer a { color: var(--link); }
-    @media (max-width: 600px) {
-      main { padding-top: 48px; }
-      h1 { font-size: 1.9rem; }
-      .post { padding: 20px 18px; }
+    .post-card:hover { transform: translateY(-3px); box-shadow: 0 14px 34px #74638C14; }
+    .post-card .kicker { margin: 0; color: var(--rose); font-size: 11px; font-weight: 600; letter-spacing: 1.3px; text-transform: uppercase; }
+    .post-card h2 { margin: 10px 0 0; font-size: 23px; line-height: 1.35; font-weight: 600; letter-spacing: -0.3px; }
+    .post-card h2 + h2 { margin-top: 4px; font-size: 18px; font-weight: 500; color: var(--ink-soft); letter-spacing: 0; }
+    .post-card h2 a { color: inherit; text-decoration: none; }
+    .post-card h2 a:hover { color: var(--purple); }
+    .post-card .summary { margin: 14px 0 16px; color: var(--muted); font-size: 15px; line-height: 1.75; }
+    .langs { display: flex; flex-wrap: wrap; gap: 10px; margin: 0; padding: 0; list-style: none; }
+    .langs li { margin: 0; }
+    .langs li::marker { content: none; }
+    .langs a { text-decoration: none; }
+    @media (max-width: 760px) {
+      .post-head { padding-bottom: 140px; }
+      .post-card { padding: 18px 18px 16px; }
+      .post-card h2 { font-size: 20px; }
+      .post-card h2 + h2 { font-size: 16px; }
     }
   </style>
 </head>
 <body>
+<div class="dream-sky" aria-hidden="true"><i></i><i></i><span>✦</span><span>✧</span><span>✦</span></div>
+<header class="topbar">
+  <div class="brand-cluster">
+    <a class="brand" href="https://interactive-active-ai.github.io/NextTransformer/" aria-label="NextTransformer Observatory"><span class="brand-mark" aria-hidden="true">N<span>↗</span></span><b>NextTransformer</b></a>
+    <a class="iaai-brand" href="https://github.com/Interactive-Active-AI" aria-label="IAAI · Interactive &amp; Active AI"><img src="attnres-canon/assets/iaai.png" width="34" height="34" alt="IAAI logo"><b>IAAI</b><span>Interactive <i>&amp;</i> Active AI</span></a>
+  </div>
+  <nav class="header-actions" aria-label="Site links">
+    <a class="header-link" href="https://interactive-active-ai.github.io/NextTransformer/">Observatory</a>
+    <a class="header-link" href="https://interactive-active-ai.github.io/NextTransformer/docs/">Docs</a>
+    <a class="repo-button" href="https://github.com/Interactive-Active-AI/NextTransformer" aria-label="NextTransformer on GitHub"><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg><span>GitHub</span></a>
+  </nav>
+</header>
+
+<div class="page">
 <main>
-  <p class="eyebrow">NEXTTRANSFORMER</p>
-  <h1>NextTransformer Blogs</h1>
-  <p class="lead">Research posts from the NextTransformer arena. / NextTransformer 的研究博客。</p>
+  <header class="post-head">
+    <p class="eyebrow">NextTransformer Blog</p>
+    <h1>Research notes<em>from the auto-research arena</em></h1>
+    <p class="lead">Posts on what we learn while studying the next generation of Transformers. <span lang="zh-CN" style="display: block;">NextTransformer 的研究博客。</span></p>
+  </header>
 
-  <article class="post">
-    <p class="post-meta">November 2026 · Arena v1</p>
-    <h2 lang="zh-CN"><a href="attnres-canon/">Opus 如何找到 AttnRes-Canon：一次架构探索的 Discovery Trace</a></h2>
-    <h2><a href="attnres-canon/en/">How Opus Found AttnRes-Canon: The Discovery Trace of an Architecture Search</a></h2>
-    <p class="summary">We ran an auto-research experiment on NextTransformer Arena v1: Claude Opus designed and screened architectures on its own and found AttnRes-Canon. This post reviews the process, findings, and lessons of that search.</p>
-    <ul class="langs">
-      <li><a href="attnres-canon/" hreflang="zh-CN" lang="zh-CN">中文</a></li>
-      <li><a href="attnres-canon/en/" hreflang="en">English</a></li>
-    </ul>
-  </article>
-
-  <footer>
-    <a href="https://github.com/Interactive-Active-AI/NextTransformer">NextTransformer on GitHub</a>
-  </footer>
+  <section class="posts" aria-label="Posts">
+    <p class="eyebrow">01 / Posts</p>
+    <article class="post-card">
+      <p class="kicker">Arena v1 · November 2026</p>
+      <h2 lang="zh-CN"><a href="attnres-canon/">Opus 如何找到 AttnRes-Canon：一次架构探索的 Discovery Trace</a></h2>
+      <h2><a href="attnres-canon/en/">How Opus Found AttnRes-Canon: The Discovery Trace of an Architecture Search</a></h2>
+      <p class="summary">An auto-research experiment on Arena v1: Claude Opus designed and screened architectures on its own and found AttnRes-Canon, first on the leaderboard by CORE and by validation BPB. The post looks back at the process, what it showed and what we learned.</p>
+      <ul class="langs">
+        <li><a class="pill" href="attnres-canon/" hreflang="zh-CN" lang="zh-CN">中文</a></li>
+        <li><a class="pill" href="attnres-canon/en/" hreflang="en">English</a></li>
+      </ul>
+    </article>
+  </section>
 </main>
+</div>
+
+<div class="footer-wrap" style="margin-top: 56px;">
+<footer class="site-footer">
+  <a class="footer-brand" href="https://interactive-active-ai.github.io/NextTransformer/">NextTransformer <span>·</span> a study of computation</a>
+  <div><a href="https://interactive-active-ai.github.io/NextTransformer/">Observatory</a><a href="https://interactive-active-ai.github.io/NextTransformer/docs/">Docs</a><a href="https://github.com/Interactive-Active-AI/NextTransformer">GitHub</a></div>
+</footer>
+</div>
 </body>
 </html>

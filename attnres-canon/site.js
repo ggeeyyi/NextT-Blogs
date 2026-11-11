@@ -57,7 +57,7 @@
   }
 
   // ---------- entrance motion ----------
-  const revealables = document.querySelectorAll('.abstract, .toc, figure');
+  const revealables = document.querySelectorAll('.abstract, .toc, .cards, figure');
   if (motion()) {
     root.classList.add('js-motion');
     revealables.forEach((node) => node.classList.add('reveal'));
