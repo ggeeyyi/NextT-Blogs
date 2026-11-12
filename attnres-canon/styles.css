@@ -161,7 +161,17 @@ code { font: 0.86em var(--mono); background: var(--purple-soft); color: var(--pu
   border-radius: 999px; padding: 5px 13px; cursor: pointer; transition: background 0.2s, color 0.2s, border-color 0.2s;
 }
 a.pill:hover, button.pill:hover { background: var(--blue-soft); border-color: var(--blue-line); color: var(--blue); }
-.pill:focus-visible, .repo-button:focus-visible, .header-link:focus-visible { outline: 2px solid var(--blue); outline-offset: 3px; }
+.pill:focus-visible, .repo-button:focus-visible, .header-link:focus-visible, .trace-button:focus-visible { outline: 2px solid var(--blue); outline-offset: 3px; }
+/* The way into the post's research trace: three staggered bars, as on its time axis. On wide screens it sits in the top
+   bar; on narrow ones, where the bar has no room, the same button sits in the title card's meta row instead. */
+.trace-button {
+  display: inline-flex; align-items: center; gap: 6px; height: 34px; padding: 0 13px; border: 1px solid var(--purple-line); border-radius: 999px;
+  background: var(--purple-soft); color: var(--purple); font-size: 13px; font-weight: 600; white-space: nowrap; transition: background 0.2s, border-color 0.2s;
+}
+.trace-button:hover { background: color-mix(in srgb, var(--purple) 14%, var(--surface)); border-color: var(--purple); color: var(--purple); }
+.trace-button svg { flex: none; }
+.post-meta .meta-trace { display: none; text-decoration: none; }
+.post-meta .meta-trace span { color: inherit; font-weight: 600; }
 
 /* Page frame: one centered column on the paper, with a section rail in the left margin on wide screens. */
 .page { display: grid; grid-template-columns: minmax(0, 920px); justify-content: center; padding: 0 24px; }
@@ -356,6 +366,16 @@ html[lang^="zh"] .fig-body svg text.note { font-style: normal; }
 
 @media (max-width: 1100px) {
   .iaai-brand > span { display: none; }
+}
+/* The trace button: icon only just above the width where the IAAI lockup gets its full name; below 960px the top bar
+   has no room for it, and the button in the title card takes over. */
+@media (min-width: 1101px) and (max-width: 1150px) {
+  .topbar .trace-button { width: 34px; padding: 0; justify-content: center; }
+  .topbar .trace-button span { display: none; }
+}
+@media (max-width: 960px) {
+  .topbar .trace-button { display: none; }
+  .post-meta .meta-trace { display: inline-flex; height: 30px; padding: 0 12px; }
 }
 @media (max-width: 760px) {
   body { font-size: 16px; }
