@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AttnRes-Canon 的研究轨迹</title>
+  <meta name="description" content="Claude Opus 找到 AttnRes-Canon 的那次会话，放在一条时间轴上：人问了什么，Agent 何时在工作，每个实验从发起到出结果，以及它的回答。">
+  <meta property="og:type" content="article">
+  <meta property="og:title" content="AttnRes-Canon 的研究轨迹">
+  <meta property="og:description" content="Claude Opus 找到 AttnRes-Canon 的那次会话，放在一条时间轴上：指令、回复，以及每个实验从发起到出结果。">
+  <meta property="og:image" content="https://interactive-active-ai.github.io/NextTransformer/brand/social-preview.jpg">
+  <link rel="icon" href="../../favicon.svg" type="image/svg+xml">
+  <link rel="alternate" hreflang="en" href="../../trace/">
+  <link rel="stylesheet" href="../../styles.css">
+  <link rel="stylesheet" href="../../trace/trace.css">
+</head>
+<body>
+<div class="dream-sky" aria-hidden="true"><i></i><i></i><span>✦</span><span>✧</span><span>✦</span></div>
+<div class="progress" aria-hidden="true"><span></span></div>
+<header class="topbar">
+  <div class="brand-cluster">
+    <a class="brand" href="https://interactive-active-ai.github.io/NextTransformer/" aria-label="NextTransformer Observatory"><span class="brand-mark" aria-hidden="true">N<span>↗</span></span><b>NextTransformer</b></a>
+    <a class="iaai-brand" href="https://github.com/Interactive-Active-AI" aria-label="IAAI · Interactive &amp; Active AI"><img src="../../assets/iaai.png" width="34" height="34" alt="IAAI logo"><b>IAAI</b><span>Interactive <i>&amp;</i> Active AI</span></a>
+  </div>
+  <nav class="header-actions" aria-label="站点链接">
+    <a class="header-link" href="../../../">Blog</a>
+    <a class="header-link" href="https://interactive-active-ai.github.io/NextTransformer/">Observatory</a>
+    <a class="header-link" href="https://interactive-active-ai.github.io/NextTransformer/docs/zh-cn/">文档</a>
+    <a class="repo-button" href="https://github.com/Interactive-Active-AI/NextTransformer" aria-label="NextTransformer on GitHub"><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg><span>GitHub</span></a>
+    <a class="pill" href="../../trace/" hreflang="en" lang="en">English</a>
+    <button id="theme-toggle" class="pill" type="button" aria-label="切换浅色或深色主题">深色</button>
+  </nav>
+</header>
+
+<div class="page trace-page">
+<main id="top">
+<article>
+  <header class="trace-head">
+    <p class="back"><a href="../">← Opus 如何找到 AttnRes-Canon</a></p>
+    <p class="eyebrow">NextTransformer Blog / Arena v1</p>
+    <h1>研究轨迹<span class="sr">：</span><em>AttnRes-Canon 是怎样找到的</em></h1>
+    <p class="trace-intro">这一页回放 Claude Opus 5.5 找到 AttnRes-Canon 的那次会话，来龙去脉见<a href="../">正文</a>。一条时间轴上放着人批准了什么、Agent 何时在工作、每个实验从发起到出结果、它请来的评审，以及唯一一次联网搜索。点开任一回合，可以看到它的输入、Agent 做了什么、最后回答了什么。时间为北京时间（UTC+8）。</p>
+  </header>
+
+  <div id="trace-app"></div>
+  <noscript><p>这一页需要 JavaScript 才能画出轨迹。</p></noscript>
+
+  <section class="trace-notes">
+    <h2>怎么读</h2>
+    <ul>
+      <li>一个回合的开头，要么是人给出一条输入，要么是 Agent 之前设好的后台监视结束了（比如“等到任意一个 run 跑完”）。另有四个回合画成空心条：会话停下后由人恢复，没有新的指令。两个回合之间，Agent 处于空闲。</li>
+      <li>实验在等待 GPU 时画成细线，训练时画成色条。“结果返回”指实验结束后、这里收录的第一个回合。</li>
+      <li>人的输入以英文呈现：第一条任务说明是全文翻译，之后各条概括为批准了什么，以及给定的算力额度。带对勾的圆圈表示批准。</li>
+      <li>偏离研究主线的对话没有收录：询问进度、岔开去的提问、杂务，以及与这次研究无关的工作。</li>
+      <li>Agent 的回复和说明都以英文呈现。标有“英文翻译”的回复是译文，部分说明也是。</li>
+      <li>Agent 唯一的一次联网搜索在回合列表里单独成条，列出搜索词和搜索返回的全部内容。</li>
+      <li>算力集群的名字、文件路径和作业名换成了中性的说法；讲集群状态与接口、发布流程的段落已删去，所以有些回复比 Agent 写下时短。</li>
+    </ul>
+  </section>
+</article>
+</main>
+</div>
+
+<footer class="site-footer">
+  <a class="footer-brand" href="https://interactive-active-ai.github.io/NextTransformer/">NextTransformer <span>·</span> a study of computation</a>
+  <div><a href="../">正文</a><a href="https://interactive-active-ai.github.io/NextTransformer/">Observatory</a><a href="https://interactive-active-ai.github.io/NextTransformer/docs/zh-cn/">文档</a><a href="https://github.com/Interactive-Active-AI/NextTransformer">GitHub</a><a href="../../trace/" hreflang="en" lang="en">English</a></div>
+</footer>
+
+<script src="../../site.js"></script>
+<script src="../../trace/trace-data.js"></script>
+<script src="../../trace/trace.js"></script>
+</body>
+</html>

@@ -7,6 +7,9 @@ Pages at <https://interactive-active-ai.github.io/NextT-Blogs/>.
 | --- | --- | --- |
 | How Opus Found AttnRes-Canon: The Discovery Trace of an Architecture Search (Arena v1, November 2026) | [`attnres-canon/`](attnres-canon/) | [`attnres-canon/zh/`](attnres-canon/zh/) |
 
+The AttnRes-Canon post comes with a research trace, the session behind it on one time axis:
+[`attnres-canon/trace/`](attnres-canon/trace/) and [`attnres-canon/zh/trace/`](attnres-canon/zh/trace/).
+
 ## Layout
 
 - `index.html` is the list of posts. It wears the same look as the posts and borrows the stylesheet and brand
